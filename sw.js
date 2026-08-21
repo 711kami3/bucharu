@@ -1,7 +1,13 @@
 // ネットワーク優先のサービスワーカー
 // オンライン時は常に最新を取得し、オフライン時のみキャッシュを使う
-const CACHE = 'fm-v3';
-const ASSETS = ['./', './index.html', './manifest.json', './vendor/zxing.min.js'];
+const CACHE = 'fm-v4';
+const ASSETS = [
+  './', './index.html', './manifest.json',
+  './vendor/zxing.min.js',
+  './vendor/firebase-app-compat.js',
+  './vendor/firebase-auth-compat.js',
+  './vendor/firebase-firestore-compat.js'
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));

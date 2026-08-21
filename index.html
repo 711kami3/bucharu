@@ -26,7 +26,9 @@
     font-weight:700; font-size:18px; position:sticky; top:0; z-index:20;
     display:flex; align-items:center; gap:8px;
   }
-  header .sub{font-size:12px; font-weight:400; opacity:.9; margin-left:auto;}
+  header .sub{font-size:12px; font-weight:400; opacity:.9;}
+  header .right{margin-left:auto; display:flex; align-items:center; gap:10px;}
+  header #storeBtn{background:rgba(255,255,255,.2); color:#fff; border:none; border-radius:20px; padding:5px 12px; font-size:13px; font-weight:600; cursor:pointer;}
   main{padding:14px; max-width:640px; margin:0 auto;}
   .tab{display:none;}
   .tab.active{display:block;}
@@ -125,8 +127,12 @@
 </head>
 <body>
 <header>
-  🗓️ 鮮度管理
-  <span class="sub" id="clock"></span>
+  <span>🗓️ 鮮度管理</span>
+  <button id="storeBtn" type="button">🏪 未設定</button>
+  <span class="right">
+    <span class="sub" id="syncDot">●</span>
+    <span class="sub" id="clock"></span>
+  </span>
 </header>
 
 <main>
@@ -216,17 +222,80 @@
   </div>
 </div>
 
+<!-- 店舗コード設定モーダル -->
+<div class="modal" id="storeGate">
+  <div class="sheet">
+    <h2>店舗コードを設定</h2>
+    <p class="muted" style="margin:0 0 12px; line-height:1.6">同じ「店舗コード（合言葉）」を入れた端末どうしで、データが共有されます。店舗ごとに好きな英数字を決めてください。<br>例：<b>kofu-kamiishida</b></p>
+    <input id="storeInput" placeholder="例）kofu-kamiishida" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button class="btn" id="storeSave" style="margin-top:14px">接続する</button>
+    <p class="muted" style="margin-top:10px; font-size:12px">※ 全店舗で同じコードにすると全部が混ざります。店舗ごとに変えてください。</p>
+  </div>
+</div>
+
+<script src="vendor/firebase-app-compat.js"></script>
+<script src="vendor/firebase-auth-compat.js"></script>
+<script src="vendor/firebase-firestore-compat.js"></script>
 <script src="vendor/zxing.min.js"></script>
 <script>
-/* ============ データ層（端末内保存 localStorage） ============ */
-const DB = {
-  items(){ return JSON.parse(localStorage.getItem('fm_items')||'[]'); },
-  saveItems(v){ localStorage.setItem('fm_items', JSON.stringify(v)); },
-  master(){ return JSON.parse(localStorage.getItem('fm_master')||'{}'); },
-  saveMaster(v){ localStorage.setItem('fm_master', JSON.stringify(v)); },
+/* ============ データ層（Firebase 共有DB＋オフライン対応） ============ */
+const firebaseConfig = {
+  apiKey: "AIzaSyBeCMW9k-B2eV0568A69KS4rNxeXYMCJyY",
+  authDomain: "sencho-kanri.firebaseapp.com",
+  projectId: "sencho-kanri",
+  storageBucket: "sencho-kanri.firebasestorage.app",
+  messagingSenderId: "493014371334",
+  appId: "1:493014371334:web:4871bea3f31f60bd714787"
 };
+firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+const fbDb = firebase.firestore();
+fbDb.enablePersistence({synchronizeTabs:true}).catch(()=>{}); // オフラインキャッシュ
+
+let ITEMS = [];   // 同期された商品一覧（メモリ上）
+let MASTER = {};  // 同期された商品マスター
+let unsubItems=null, unsubMaster=null;
+
+function getStore(){ return localStorage.getItem('fm_store')||''; }
+function setStore(c){ localStorage.setItem('fm_store', c); }
+function baseRef(){ return fbDb.collection('stores').doc(getStore()); }
+
+// 既存の呼び出しと互換：同期済みメモリを返す
+const DB = { items(){ return ITEMS; }, master(){ return MASTER; } };
 const uid = ()=> Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const SOON_MIN = 60; // 「まもなく」判定：期限まで60分以内
+
+function startSync(){
+  stopSync();
+  const b = baseRef();
+  unsubItems = b.collection('items').onSnapshot(snap=>{
+    ITEMS = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    setSyncStatus(snap.metadata.fromCache ? 'offline' : 'online');
+    refreshUI();
+  }, err=>{ console.warn('items sync', err); setSyncStatus('offline'); });
+  unsubMaster = b.collection('master').onSnapshot(snap=>{
+    MASTER={}; snap.docs.forEach(d=> MASTER[d.id]=d.data());
+  }, err=>{ console.warn('master sync', err); });
+}
+function stopSync(){
+  if(unsubItems){ unsubItems(); unsubItems=null; }
+  if(unsubMaster){ unsubMaster(); unsubMaster=null; }
+  ITEMS=[]; MASTER={};
+}
+function refreshUI(){
+  const on=document.querySelector('nav button.on');
+  const tab=on?on.dataset.tab:'scan';
+  if(tab==='list') renderList();
+  if(tab==='cal') renderCal();
+  checkAlerts();
+}
+function setSyncStatus(s){
+  const el=$('#syncDot'); if(!el) return;
+  if(s==='online'){ el.textContent='● 同期中'; el.style.color='#c7f0d5'; }
+  else { el.textContent='● オフライン'; el.style.color='#ffd9a8'; }
+}
+function updateStoreLabel(){ const b=$('#storeBtn'); if(b) b.textContent='🏪 '+(getStore()||'未設定'); }
+function openStoreGate(){ $('#storeInput').value=getStore(); $('#storeGate').classList.add('show'); setTimeout(()=>$('#storeInput').focus(),100); }
 
 /* ============ 共通ユーティリティ ============ */
 const $ = s => document.querySelector(s);
@@ -400,21 +469,21 @@ $('#saveBtn').onclick = ()=>{
   const name = $('#pname').value.trim();
   const date = $('#edate').value, time=$('#etime').value;
   const qty = Math.max(1, +$('#qty').value||1);
+  if(!getStore()){ openStoreGate(); return; }
   if(!name){ alert('商品名を入力してください'); return; }
   if(!date || !time){ alert('廃棄タイミング（期限）を入力してください'); return; }
   const expiry = new Date(`${date}T${time}`).toISOString();
-  // マスター更新
-  if(jan){ const m=DB.master(); m[jan]={name}; DB.saveMaster(m); }
-  // アイテム追加
-  const items = DB.items();
-  items.push({id:uid(), jan, name, expiry, qty, createdAt:new Date().toISOString(), discarded:false});
-  DB.saveItems(items);
+  const id = uid();
+  const b = baseRef();
+  // アイテム追加（共有DBへ。オフライン時は自動でキュー→復帰時に同期）
+  b.collection('items').doc(id).set({jan, name, expiry, qty, createdAt:new Date().toISOString(), discarded:false});
+  // マスター更新（次回から自動表示）
+  if(jan) b.collection('master').doc(jan).set({name});
   // リセット
   $('#pname').value=''; $('#jan').value=''; $('#qty').value=1; $('#masterNote').textContent='';
   $('#scanHint').textContent='バーコードを枠内に';
   if(navigator.vibrate) navigator.vibrate([40,40,40]);
   showToast(`登録しました：${name} ${qty}点`);
-  checkAlerts();
 };
 function showToast(msg){
   const t=document.createElement('div');
@@ -456,9 +525,9 @@ function renderList(){
   }).join('');
 }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-window.discard=id=>{ const it=DB.items(); const x=it.find(i=>i.id===id); if(x){x.discarded=true; x.discardedAt=new Date().toISOString();} DB.saveItems(it); renderList(); checkAlerts(); };
-window.undiscard=id=>{ const it=DB.items(); const x=it.find(i=>i.id===id); if(x)x.discarded=false; DB.saveItems(it); renderList(); checkAlerts(); };
-window.delItem=id=>{ if(!confirm('この記録を削除しますか？')) return; DB.saveItems(DB.items().filter(i=>i.id!==id)); renderList(); };
+window.discard=id=>{ baseRef().collection('items').doc(id).update({discarded:true, discardedAt:new Date().toISOString()}); };
+window.undiscard=id=>{ baseRef().collection('items').doc(id).update({discarded:false}); };
+window.delItem=id=>{ if(!confirm('この記録を削除しますか？')) return; baseRef().collection('items').doc(id).delete(); };
 
 /* ============ カレンダー ============ */
 let calY, calM; // 表示中の年月
@@ -506,6 +575,24 @@ $('#modal').onclick=e=>{ if(e.target.id==='modal') $('#modal').classList.remove(
 (function init(){
   const t=toLocalInput(new Date());
   $('#edate').value=t.date;
+  updateStoreLabel();
+  // 店舗コード設定
+  $('#storeBtn').onclick=()=>openStoreGate();
+  $('#storeSave').onclick=()=>{
+    let code=$('#storeInput').value.trim().toLowerCase().replace(/[^a-z0-9_\-]/g,'');
+    if(code.length<3){ alert('3文字以上の英数字で入力してください（例：kofu-kamiishida）'); return; }
+    setStore(code); updateStoreLabel();
+    $('#storeGate').classList.remove('show');
+    if(fbAuth.currentUser) startSync();
+  };
+  $('#storeInput').onkeydown=e=>{ if(e.key==='Enter') $('#storeSave').click(); };
+  // 店舗コード未設定の初回はモーダルを閉じさせない
+  $('#storeGate').onclick=e=>{ if(e.target.id==='storeGate' && getStore()) $('#storeGate').classList.remove('show'); };
+  // Firebase 匿名ログイン → 同期開始
+  fbAuth.signInAnonymously().catch(e=>{ console.warn('auth', e); setSyncStatus('offline'); });
+  fbAuth.onAuthStateChanged(user=>{
+    if(user){ if(getStore()) startSync(); else openStoreGate(); }
+  });
   checkAlerts();
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 })();

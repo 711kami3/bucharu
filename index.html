@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b7d3e">
+<title>鮮度管理</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  :root{
+    --green:#0b7d3e; --green-d:#095f30;
+    --orange:#e67e00; --red:#d23b34; --gray:#6b7280;
+    --bg:#f4f5f7; --card:#ffffff; --line:#e5e7eb; --text:#1f2430;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
+    background:var(--bg); color:var(--text);
+    padding-bottom:calc(68px + env(safe-area-inset-bottom));
+    -webkit-user-select:none; user-select:none;
+  }
+  header{
+    background:var(--green); color:#fff;
+    padding:calc(12px + env(safe-area-inset-top)) 16px 12px;
+    font-weight:700; font-size:18px; position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; gap:8px;
+  }
+  header .sub{font-size:12px; font-weight:400; opacity:.9; margin-left:auto;}
+  main{padding:14px; max-width:640px; margin:0 auto;}
+  .tab{display:none;}
+  .tab.active{display:block;}
+
+  /* 通知バナー */
+  #alertBanner{
+    display:none; background:#fff4e5; border:1px solid #ffcf8f;
+    color:#8a4b00; border-radius:12px; padding:12px 14px; margin-bottom:12px;
+    font-size:14px; line-height:1.5;
+  }
+  #alertBanner.show{display:block;}
+  #alertBanner b{color:var(--red);}
+
+  /* カメラ */
+  .scanBox{
+    background:#000; border-radius:16px; overflow:hidden; position:relative;
+    aspect-ratio:3/4; display:flex; align-items:center; justify-content:center;
+  }
+  .scanBox video{width:100%; height:100%; object-fit:cover;}
+  .scanBox .frame{
+    position:absolute; inset:18% 12%; border:3px solid rgba(255,255,255,.9);
+    border-radius:12px; box-shadow:0 0 0 9999px rgba(0,0,0,.25);
+  }
+  .scanBox .hint{position:absolute; bottom:12px; color:#fff; font-size:13px; background:rgba(0,0,0,.5); padding:6px 12px; border-radius:20px;}
+  .scanBox .placeholder{color:#bbb; font-size:14px; text-align:center; padding:20px;}
+
+  .row{display:flex; gap:10px;}
+  .row>*{flex:1;}
+  label{font-size:13px; color:var(--gray); display:block; margin:14px 0 6px; font-weight:600;}
+  input,select,button,textarea{font-size:16px; font-family:inherit;}
+  input,select{
+    width:100%; padding:12px; border:1.5px solid var(--line); border-radius:10px;
+    background:#fff; color:var(--text);
+  }
+  input:focus,select:focus{outline:none; border-color:var(--green);}
+  .btn{
+    border:none; border-radius:10px; padding:13px; font-weight:700; color:#fff;
+    background:var(--green); width:100%; cursor:pointer;
+  }
+  .btn:active{background:var(--green-d);}
+  .btn.sec{background:#eef0f3; color:var(--text);}
+  .btn.sm{padding:8px 12px; width:auto; font-size:14px;}
+  .chips{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;}
+  .chip{background:#eef0f3; border:none; border-radius:20px; padding:8px 14px; font-size:14px; cursor:pointer;}
+  .chip:active{background:#dde1e6;}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px;}
+  .card h3{margin:0 0 4px; font-size:15px;}
+  .muted{color:var(--gray); font-size:13px;}
+
+  /* 一覧アイテム */
+  .item{display:flex; align-items:center; gap:12px; background:#fff; border:1px solid var(--line); border-left-width:6px; border-radius:12px; padding:12px; margin-bottom:10px;}
+  .item.ok{border-left-color:var(--green);}
+  .item.soon{border-left-color:var(--orange); background:#fffaf2;}
+  .item.over{border-left-color:var(--red); background:#fdf1f0;}
+  .item .info{flex:1; min-width:0;}
+  .item .info .name{font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .item .info .meta{font-size:13px; color:var(--gray); margin-top:2px;}
+  .item .badge{font-size:12px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap;}
+  .badge.ok{background:#e3f5ea; color:var(--green);}
+  .badge.soon{background:#ffe9cc; color:var(--orange);}
+  .badge.over{background:#fbdedb; color:var(--red);}
+  .item .qty{font-size:14px; font-weight:700; min-width:36px; text-align:right;}
+  .iconbtn{background:none; border:none; font-size:20px; padding:6px; cursor:pointer; color:var(--gray);}
+
+  .seg{display:flex; background:#eef0f3; border-radius:10px; padding:4px; margin-bottom:14px;}
+  .seg button{flex:1; border:none; background:none; padding:9px; border-radius:8px; font-size:14px; font-weight:600; color:var(--gray); cursor:pointer;}
+  .seg button.on{background:#fff; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.08);}
+
+  /* カレンダー */
+  .calhead{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .calhead b{font-size:16px;}
+  .cal{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+  .cal .dow{text-align:center; font-size:12px; color:var(--gray); padding:4px 0;}
+  .cal .cell{aspect-ratio:1/1.1; background:#fff; border:1px solid var(--line); border-radius:8px; padding:4px; font-size:13px; position:relative; cursor:pointer;}
+  .cal .cell.empty{background:transparent; border:none; cursor:default;}
+  .cal .cell.today{border-color:var(--green); border-width:2px;}
+  .cal .cell .n{font-weight:600;}
+  .cal .cell .dot{position:absolute; bottom:4px; left:50%; transform:translateX(-50%); font-size:11px; font-weight:700; color:#fff; background:var(--orange); border-radius:20px; min-width:18px; text-align:center; padding:1px 4px;}
+  .sat{color:#2a6fd6;} .sun{color:#d23b34;}
+
+  nav{position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line);
+    display:flex; padding-bottom:env(safe-area-inset-bottom); z-index:20;}
+  nav button{flex:1; border:none; background:none; padding:10px 0 8px; font-size:11px; color:var(--gray); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;}
+  nav button.on{color:var(--green);}
+  nav button .ic{font-size:22px;}
+
+  .empty{text-align:center; color:var(--gray); padding:40px 20px; font-size:14px;}
+
+  /* モーダル */
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:flex-end; z-index:40;}
+  .modal.show{display:flex;}
+  .sheet{background:#fff; width:100%; max-width:640px; margin:0 auto; border-radius:18px 18px 0 0; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); max-height:80vh; overflow:auto;}
+  .sheet h2{margin:0 0 10px; font-size:17px;}
+</style>
+</head>
+<body>
+<header>
+  🗓️ 鮮度管理
+  <span class="sub" id="clock"></span>
+</header>
+
+<main>
+  <div id="alertBanner"></div>
+
+  <!-- スキャン -->
+  <section class="tab active" id="tab-scan">
+    <div class="scanBox" id="scanBox">
+      <div class="placeholder" id="scanPlaceholder">カメラでバーコードを読み取ります<br>「カメラ開始」を押してください</div>
+      <video id="video" playsinline style="display:none"></video>
+      <div class="frame" id="frame" style="display:none"></div>
+      <div class="hint" id="scanHint" style="display:none">バーコードを枠内に</div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="startCam">📷 カメラ開始</button>
+      <button class="btn sec" id="stopCam" style="display:none">停止</button>
+    </div>
+
+    <div class="card" id="entryCard" style="margin-top:14px">
+      <label>バーコード(JAN)</label>
+      <div class="row">
+        <input id="jan" inputmode="numeric" placeholder="手入力も可能">
+        <button class="btn sec sm" id="lookupBtn" style="flex:0 0 auto">確認</button>
+      </div>
+
+      <label>商品名</label>
+      <input id="pname" placeholder="例） 幕の内弁当">
+      <div class="muted" id="masterNote" style="margin-top:4px"></div>
+
+      <label>廃棄タイミング（期限）</label>
+      <div class="chips" id="quickChips">
+        <button class="chip" data-preset="today18">今日 18:00</button>
+        <button class="chip" data-preset="today22">今日 22:00</button>
+        <button class="chip" data-preset="tom10">明日 10:00</button>
+        <button class="chip" data-preset="plus3h">3時間後</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input id="edate" type="date">
+        <input id="etime" type="time">
+      </div>
+
+      <label>個数</label>
+      <div class="row" style="align-items:center">
+        <button class="btn sec sm" id="qtyMinus" style="flex:0 0 52px">−</button>
+        <input id="qty" type="number" value="1" min="1" style="text-align:center">
+        <button class="btn sec sm" id="qtyPlus" style="flex:0 0 52px">＋</button>
+      </div>
+
+      <button class="btn" id="saveBtn" style="margin-top:16px">✓ 登録する</button>
+    </div>
+  </section>
+
+  <!-- 一覧 -->
+  <section class="tab" id="tab-list">
+    <div class="seg" id="listSeg">
+      <button class="on" data-f="active">未廃棄</button>
+      <button data-f="today">今日廃棄</button>
+      <button data-f="done">廃棄済み</button>
+    </div>
+    <div id="listArea"></div>
+  </section>
+
+  <!-- カレンダー -->
+  <section class="tab" id="tab-cal">
+    <div class="calhead">
+      <button class="btn sec sm" id="prevM">‹</button>
+      <b id="calTitle"></b>
+      <button class="btn sec sm" id="nextM">›</button>
+    </div>
+    <div class="cal" id="calGrid"></div>
+    <div id="dayDetail" style="margin-top:14px"></div>
+  </section>
+</main>
+
+<nav>
+  <button class="on" data-tab="scan"><span class="ic">📷</span>スキャン</button>
+  <button data-tab="list"><span class="ic">📋</span>一覧</button>
+  <button data-tab="cal"><span class="ic">🗓️</span>カレンダー</button>
+</nav>
+
+<!-- 日別詳細モーダル -->
+<div class="modal" id="modal">
+  <div class="sheet">
+    <h2 id="sheetTitle"></h2>
+    <div id="sheetBody"></div>
+    <button class="btn sec" id="sheetClose" style="margin-top:12px">閉じる</button>
+  </div>
+</div>
+
+<script src="vendor/zxing.min.js"></script>
+<script>
+/* ============ データ層（端末内保存 localStorage） ============ */
+const DB = {
+  items(){ return JSON.parse(localStorage.getItem('fm_items')||'[]'); },
+  saveItems(v){ localStorage.setItem('fm_items', JSON.stringify(v)); },
+  master(){ return JSON.parse(localStorage.getItem('fm_master')||'{}'); },
+  saveMaster(v){ localStorage.setItem('fm_master', JSON.stringify(v)); },
+};
+const uid = ()=> Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const SOON_MIN = 60; // 「まもなく」判定：期限まで60分以内
+
+/* ============ 共通ユーティリティ ============ */
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2,'0');
+function toLocalInput(d){ return {date:`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`, time:`${pad(d.getHours())}:${pad(d.getMinutes())}`}; }
+function fmtDT(iso){ const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function statusOf(iso){
+  const diff = (new Date(iso) - Date.now())/60000; // 分
+  if(diff < 0) return 'over';
+  if(diff <= SOON_MIN) return 'soon';
+  return 'ok';
+}
+function statusLabel(iso){
+  const diff = Math.round((new Date(iso) - Date.now())/60000);
+  if(diff < 0){ const m=-diff; return m<60?`${m}分超過`:`${Math.floor(m/60)}時間超過`; }
+  if(diff <= SOON_MIN) return `あと${diff}分`;
+  if(diff < 1440) return `あと${Math.floor(diff/60)}時間`;
+  return `あと${Math.floor(diff/1440)}日`;
+}
+
+/* ============ タブ切替 ============ */
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    $('#tab-'+b.dataset.tab).classList.add('active');
+    if(b.dataset.tab==='list') renderList();
+    if(b.dataset.tab==='cal') renderCal();
+  };
+});
+
+/* ============ 時計 & アラート ============ */
+function tickClock(){ const d=new Date(); $('#clock').textContent=`${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+setInterval(tickClock,1000); tickClock();
+
+let notified = new Set();
+function checkAlerts(){
+  const items = DB.items().filter(i=>!i.discarded);
+  const soon = items.filter(i=> statusOf(i.expiry)!=='ok');
+  const banner = $('#alertBanner');
+  if(soon.length===0){ banner.classList.remove('show'); return; }
+  const over = soon.filter(i=>statusOf(i.expiry)==='over');
+  const near = soon.filter(i=>statusOf(i.expiry)==='soon');
+  let html = '⚠️ ';
+  if(over.length) html += `<b>期限超過 ${over.reduce((a,i)=>a+i.qty,0)}点</b> `;
+  if(near.length) html += `／ まもなく ${near.reduce((a,i)=>a+i.qty,0)}点`;
+  html += `<br><span class="muted">`+ soon.slice(0,3).map(i=>`${i.name}(${statusLabel(i.expiry)})`).join('・') + (soon.length>3?' 他':'') +`</span>`;
+  banner.innerHTML = html; banner.classList.add('show');
+  // ブラウザ通知（許可時のみ・重複防止）
+  if('Notification' in window && Notification.permission==='granted'){
+    soon.forEach(i=>{
+      const key = i.id + statusOf(i.expiry);
+      if(!notified.has(key)){
+        notified.add(key);
+        new Notification('鮮度管理アラート', {body:`${i.name} ${i.qty}点：${statusLabel(i.expiry)}`});
+      }
+    });
+  }
+}
+setInterval(checkAlerts, 30000);
+
+/* ============ カメラ / バーコード ============ */
+let stream=null, scanning=false, detector=null, zxingReader=null;
+if('BarcodeDetector' in window){
+  detector = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','codabar','itf']});
+}
+$('#startCam').onclick = startCam;
+$('#stopCam').onclick = stopCam;
+async function startCam(){
+  const v=$('#video');
+  const showUI=()=>{ v.style.display='block'; $('#frame').style.display='block'; $('#scanHint').style.display='block';
+    $('#scanPlaceholder').style.display='none'; $('#startCam').style.display='none'; $('#stopCam').style.display='block'; };
+  try{
+    if(detector){
+      // Android Chrome 等：ブラウザ標準APIで読取（高速）
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+      v.srcObject=stream; await v.play(); showUI();
+      scanning=true; loopDetect();
+    } else if(window.ZXing){
+      // iPhone Safari 等：ZXingライブラリで読取
+      zxingReader = new ZXing.BrowserMultiFormatReader();
+      showUI(); scanning=true;
+      $('#scanHint').textContent='バーコードを枠内に';
+      await zxingReader.decodeFromConstraints(
+        {video:{facingMode:'environment'}}, v,
+        (result)=>{ if(result) onScanned(result.getText()); }
+      );
+    } else {
+      // 読取エンジンが無い端末：番号手入力で運用
+      showUI();
+      $('#scanHint').textContent='この端末は自動読取に非対応。番号は手入力してください';
+    }
+    if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
+  }catch(e){ alert('カメラを起動できませんでした。\nHTTPS環境か、カメラ権限をご確認ください。\n（番号の手入力でも登録できます）'); }
+}
+function stopCam(){
+  scanning=false;
+  if(zxingReader){ try{ zxingReader.reset(); }catch(e){} zxingReader=null; }
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  const v=$('#video'); v.style.display='none'; $('#frame').style.display='none'; $('#scanHint').style.display='none';
+  $('#scanPlaceholder').style.display='block';
+  $('#startCam').style.display='block'; $('#stopCam').style.display='none';
+}
+let lastCode='', lastTime=0;
+async function loopDetect(){
+  if(!scanning) return;
+  try{
+    const codes = await detector.detect($('#video'));
+    if(codes.length){
+      const val = codes[0].rawValue;
+      const now = Date.now();
+      if(val && (val!==lastCode || now-lastTime>2500)){
+        lastCode=val; lastTime=now;
+        onScanned(val);
+      }
+    }
+  }catch(e){}
+  requestAnimationFrame(loopDetect);
+}
+function onScanned(code){
+  if(navigator.vibrate) navigator.vibrate(60);
+  $('#jan').value = code;
+  lookup(code);
+  $('#scanHint').textContent = '読み取り: '+code;
+}
+
+/* ============ 商品マスター参照 ============ */
+$('#lookupBtn').onclick = ()=> lookup($('#jan').value.trim());
+function lookup(code){
+  if(!code) return;
+  const m = DB.master();
+  if(m[code]){
+    $('#pname').value = m[code].name;
+    $('#masterNote').textContent = '✓ 登録済み商品：自動入力しました';
+    $('#masterNote').style.color = 'var(--green)';
+  }else{
+    $('#masterNote').textContent = '初めての商品です。商品名を入力すると次回から自動表示します';
+    $('#masterNote').style.color = 'var(--gray)';
+    $('#pname').focus();
+  }
+}
+
+/* ============ 期限プリセット・個数 ============ */
+document.querySelectorAll('#quickChips .chip').forEach(c=>{
+  c.onclick = ()=>{
+    const d = new Date();
+    const p = c.dataset.preset;
+    if(p==='today18'){ d.setHours(18,0,0,0); }
+    else if(p==='today22'){ d.setHours(22,0,0,0); }
+    else if(p==='tom10'){ d.setDate(d.getDate()+1); d.setHours(10,0,0,0); }
+    else if(p==='plus3h'){ d.setHours(d.getHours()+3); d.setMinutes(0,0,0); }
+    const t = toLocalInput(d);
+    $('#edate').value=t.date; $('#etime').value=t.time;
+  };
+});
+$('#qtyMinus').onclick=()=>{ const q=$('#qty'); q.value=Math.max(1,(+q.value||1)-1); };
+$('#qtyPlus').onclick=()=>{ const q=$('#qty'); q.value=(+q.value||1)+1; };
+
+/* ============ 登録 ============ */
+$('#saveBtn').onclick = ()=>{
+  const jan = $('#jan').value.trim();
+  const name = $('#pname').value.trim();
+  const date = $('#edate').value, time=$('#etime').value;
+  const qty = Math.max(1, +$('#qty').value||1);
+  if(!name){ alert('商品名を入力してください'); return; }
+  if(!date || !time){ alert('廃棄タイミング（期限）を入力してください'); return; }
+  const expiry = new Date(`${date}T${time}`).toISOString();
+  // マスター更新
+  if(jan){ const m=DB.master(); m[jan]={name}; DB.saveMaster(m); }
+  // アイテム追加
+  const items = DB.items();
+  items.push({id:uid(), jan, name, expiry, qty, createdAt:new Date().toISOString(), discarded:false});
+  DB.saveItems(items);
+  // リセット
+  $('#pname').value=''; $('#jan').value=''; $('#qty').value=1; $('#masterNote').textContent='';
+  $('#scanHint').textContent='バーコードを枠内に';
+  if(navigator.vibrate) navigator.vibrate([40,40,40]);
+  showToast(`登録しました：${name} ${qty}点`);
+  checkAlerts();
+};
+function showToast(msg){
+  const t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1f2430;color:#fff;padding:12px 18px;border-radius:24px;font-size:14px;z-index:60;box-shadow:0 4px 16px rgba(0,0,0,.25)';
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2200);
+}
+
+/* ============ 一覧 ============ */
+let listFilter='active';
+document.querySelectorAll('#listSeg button').forEach(b=>{
+  b.onclick=()=>{ document.querySelectorAll('#listSeg button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); listFilter=b.dataset.f; renderList(); };
+});
+function renderList(){
+  let items = DB.items();
+  const area=$('#listArea');
+  if(listFilter==='active') items=items.filter(i=>!i.discarded);
+  else if(listFilter==='done') items=items.filter(i=>i.discarded);
+  else if(listFilter==='today'){
+    const t=new Date(); const key=`${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+    items=items.filter(i=>!i.discarded && i.expiry.slice(0,10)===key);
+  }
+  items.sort((a,b)=> new Date(a.expiry)-new Date(b.expiry));
+  if(items.length===0){ area.innerHTML='<div class="empty">該当する商品はありません</div>'; return; }
+  area.innerHTML = items.map(i=>{
+    const st = i.discarded?'ok':statusOf(i.expiry);
+    const badge = i.discarded?'済':(st==='over'?'超過':st==='soon'?'まもなく':'OK');
+    return `<div class="item ${i.discarded?'':st}">
+      <div class="info">
+        <div class="name">${esc(i.name)}</div>
+        <div class="meta">期限 ${fmtDT(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span></div>
+      </div>
+      <div class="qty">${i.qty}点</div>
+      ${i.discarded
+        ? `<button class="iconbtn" onclick="undiscard('${i.id}')" title="戻す">↩︎</button>`
+        : `<button class="iconbtn" onclick="discard('${i.id}')" title="廃棄した">✅</button>`}
+      <button class="iconbtn" onclick="delItem('${i.id}')" title="削除">🗑️</button>
+    </div>`;
+  }).join('');
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+window.discard=id=>{ const it=DB.items(); const x=it.find(i=>i.id===id); if(x){x.discarded=true; x.discardedAt=new Date().toISOString();} DB.saveItems(it); renderList(); checkAlerts(); };
+window.undiscard=id=>{ const it=DB.items(); const x=it.find(i=>i.id===id); if(x)x.discarded=false; DB.saveItems(it); renderList(); checkAlerts(); };
+window.delItem=id=>{ if(!confirm('この記録を削除しますか？')) return; DB.saveItems(DB.items().filter(i=>i.id!==id)); renderList(); };
+
+/* ============ カレンダー ============ */
+let calY, calM; // 表示中の年月
+(function(){ const n=new Date(); calY=n.getFullYear(); calM=n.getMonth(); })();
+$('#prevM').onclick=()=>{ calM--; if(calM<0){calM=11;calY--;} renderCal(); };
+$('#nextM').onclick=()=>{ calM++; if(calM>11){calM=0;calY++;} renderCal(); };
+function renderCal(){
+  $('#calTitle').textContent = `${calY}年 ${calM+1}月`;
+  const first=new Date(calY,calM,1); const startDow=first.getDay();
+  const days=new Date(calY,calM+1,0).getDate();
+  const items=DB.items().filter(i=>!i.discarded);
+  const byDay={};
+  items.forEach(i=>{ const d=new Date(i.expiry); if(d.getFullYear()===calY&&d.getMonth()===calM){ const k=d.getDate(); byDay[k]=(byDay[k]||0)+i.qty; } });
+  const today=new Date();
+  const dows=['日','月','火','水','木','金','土'];
+  let html = dows.map((d,i)=>`<div class="dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
+  for(let i=0;i<startDow;i++) html+='<div class="cell empty"></div>';
+  for(let d=1;d<=days;d++){
+    const dow=new Date(calY,calM,d).getDay();
+    const isToday = today.getFullYear()===calY&&today.getMonth()===calM&&today.getDate()===d;
+    const cnt=byDay[d];
+    html+=`<div class="cell ${isToday?'today':''}" onclick="showDay(${d})">
+      <span class="n ${dow===0?'sun':dow===6?'sat':''}">${d}</span>
+      ${cnt?`<span class="dot">${cnt}</span>`:''}
+    </div>`;
+  }
+  $('#calGrid').innerHTML=html;
+  $('#dayDetail').innerHTML='';
+}
+window.showDay=d=>{
+  const key=`${calY}-${pad(calM+1)}-${pad(d)}`;
+  const items=DB.items().filter(i=>!i.discarded && i.expiry.slice(0,10)===key).sort((a,b)=>new Date(a.expiry)-new Date(b.expiry));
+  $('#sheetTitle').textContent=`${calM+1}月${d}日 の廃棄予定（${items.reduce((a,i)=>a+i.qty,0)}点）`;
+  $('#sheetBody').innerHTML = items.length? items.map(i=>`
+    <div class="item ${statusOf(i.expiry)}">
+      <div class="info"><div class="name">${esc(i.name)}</div><div class="meta">期限 ${fmtDT(i.expiry)}</div></div>
+      <div class="qty">${i.qty}点</div>
+    </div>`).join('') : '<div class="empty">予定はありません</div>';
+  $('#modal').classList.add('show');
+};
+$('#sheetClose').onclick=()=>$('#modal').classList.remove('show');
+$('#modal').onclick=e=>{ if(e.target.id==='modal') $('#modal').classList.remove('show'); };
+
+/* ============ 起動時 ============ */
+(function init(){
+  const t=toLocalInput(new Date());
+  $('#edate').value=t.date;
+  checkAlerts();
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+})();
+</script>
+</body>
+</html>

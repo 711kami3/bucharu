@@ -74,6 +74,7 @@
   .chips{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;}
   .chip{background:#eef0f3; border:none; border-radius:20px; padding:8px 14px; font-size:14px; cursor:pointer;}
   .chip:active{background:#dde1e6;}
+  .chip.on{background:var(--green); color:#fff;}
 
   .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px;}
   .card h3{margin:0 0 4px; font-size:15px;}
@@ -162,16 +163,15 @@
       <input id="pname" placeholder="例） 幕の内弁当">
       <div class="muted" id="masterNote" style="margin-top:4px"></div>
 
-      <label>廃棄タイミング（期限）</label>
+      <label>廃棄日（期限）</label>
       <div class="chips" id="quickChips">
-        <button class="chip" data-preset="today18">今日 18:00</button>
-        <button class="chip" data-preset="today22">今日 22:00</button>
-        <button class="chip" data-preset="tom10">明日 10:00</button>
-        <button class="chip" data-preset="plus3h">3時間後</button>
+        <button class="chip" data-preset="m0">今月末</button>
+        <button class="chip" data-preset="m1">来月末</button>
+        <button class="chip" data-preset="m2">再来月末</button>
+        <button class="chip" data-preset="custom">カスタム</button>
       </div>
-      <div class="row" style="margin-top:8px">
+      <div style="margin-top:8px">
         <input id="edate" type="date">
-        <input id="etime" type="time">
       </div>
 
       <label>個数</label>
@@ -263,7 +263,7 @@ function baseRef(){ return fbDb.collection('stores').doc(getStore()); }
 // 既存の呼び出しと互換：同期済みメモリを返す
 const DB = { items(){ return ITEMS; }, master(){ return MASTER; } };
 const uid = ()=> Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const SOON_MIN = 60; // 「まもなく」判定：期限まで60分以内
+const SOON_DAYS = 3; // 「まもなく」判定：期限まで3日以内
 
 function startSync(){
   stopSync();
@@ -302,18 +302,25 @@ const $ = s => document.querySelector(s);
 const pad = n => String(n).padStart(2,'0');
 function toLocalInput(d){ return {date:`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`, time:`${pad(d.getHours())}:${pad(d.getMinutes())}`}; }
 function fmtDT(iso){ const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function fmtDate(iso){ const d=new Date(iso); const w=['日','月','火','水','木','金','土'][d.getDay()]; return `${d.getMonth()+1}/${d.getDate()}(${w})`; }
+// 期限日と今日の「日数差」（0=今日, -1=昨日で超過, 1=明日）
+function dayDiff(iso){
+  const e=new Date(iso); e.setHours(0,0,0,0);
+  const t=new Date(); t.setHours(0,0,0,0);
+  return Math.round((e - t)/86400000);
+}
 function statusOf(iso){
-  const diff = (new Date(iso) - Date.now())/60000; // 分
-  if(diff < 0) return 'over';
-  if(diff <= SOON_MIN) return 'soon';
+  const d = dayDiff(iso);
+  if(d < 0) return 'over';           // 期限日を過ぎた
+  if(d <= SOON_DAYS) return 'soon';  // 今日〜数日以内
   return 'ok';
 }
 function statusLabel(iso){
-  const diff = Math.round((new Date(iso) - Date.now())/60000);
-  if(diff < 0){ const m=-diff; return m<60?`${m}分超過`:`${Math.floor(m/60)}時間超過`; }
-  if(diff <= SOON_MIN) return `あと${diff}分`;
-  if(diff < 1440) return `あと${Math.floor(diff/60)}時間`;
-  return `あと${Math.floor(diff/1440)}日`;
+  const d = dayDiff(iso);
+  if(d < 0) return `${-d}日超過`;
+  if(d === 0) return '今日廃棄';
+  if(d === 1) return '明日廃棄';
+  return `あと${d}日`;
 }
 
 /* ============ タブ切替 ============ */
@@ -448,18 +455,30 @@ function lookup(code){
 }
 
 /* ============ 期限プリセット・個数 ============ */
+// 指定した月数先の「月末」の日付を返す（0=今月, 1=来月, 2=再来月）
+function monthEndDate(offset){
+  const n=new Date();
+  return new Date(n.getFullYear(), n.getMonth()+offset+1, 0); // 翌月の0日=当月末日
+}
+function setActiveChip(el){
+  document.querySelectorAll('#quickChips .chip').forEach(c=>c.classList.remove('on'));
+  if(el) el.classList.add('on');
+}
 document.querySelectorAll('#quickChips .chip').forEach(c=>{
   c.onclick = ()=>{
-    const d = new Date();
     const p = c.dataset.preset;
-    if(p==='today18'){ d.setHours(18,0,0,0); }
-    else if(p==='today22'){ d.setHours(22,0,0,0); }
-    else if(p==='tom10'){ d.setDate(d.getDate()+1); d.setHours(10,0,0,0); }
-    else if(p==='plus3h'){ d.setHours(d.getHours()+3); d.setMinutes(0,0,0); }
-    const t = toLocalInput(d);
-    $('#edate').value=t.date; $('#etime').value=t.time;
+    if(p==='custom'){
+      const el=$('#edate'); setActiveChip(c); el.focus();
+      if(el.showPicker){ try{ el.showPicker(); }catch(e){} }
+      return;
+    }
+    const offset = p==='m0'?0 : p==='m1'?1 : 2;
+    $('#edate').value = toLocalInput(monthEndDate(offset)).date;
+    setActiveChip(c);
   };
 });
+// 手動で日付を変えたら「カスタム」扱いにする
+$('#edate').onchange = ()=> setActiveChip(document.querySelector('#quickChips .chip[data-preset="custom"]'));
 $('#qtyMinus').onclick=()=>{ const q=$('#qty'); q.value=Math.max(1,(+q.value||1)-1); };
 $('#qtyPlus').onclick=()=>{ const q=$('#qty'); q.value=(+q.value||1)+1; };
 
@@ -467,12 +486,13 @@ $('#qtyPlus').onclick=()=>{ const q=$('#qty'); q.value=(+q.value||1)+1; };
 $('#saveBtn').onclick = ()=>{
   const jan = $('#jan').value.trim();
   const name = $('#pname').value.trim();
-  const date = $('#edate').value, time=$('#etime').value;
+  const date = $('#edate').value;
   const qty = Math.max(1, +$('#qty').value||1);
   if(!getStore()){ openStoreGate(); return; }
   if(!name){ alert('商品名を入力してください'); return; }
-  if(!date || !time){ alert('廃棄タイミング（期限）を入力してください'); return; }
-  const expiry = new Date(`${date}T${time}`).toISOString();
+  if(!date){ alert('廃棄日を選んでください'); return; }
+  // 日付管理。正午で保存し、日付のズレ（タイムゾーン）を防ぐ
+  const expiry = new Date(`${date}T12:00:00`).toISOString();
   const id = uid();
   const b = baseRef();
   // アイテム追加（共有DBへ。オフライン時は自動でキュー→復帰時に同期）
@@ -503,8 +523,7 @@ function renderList(){
   if(listFilter==='active') items=items.filter(i=>!i.discarded);
   else if(listFilter==='done') items=items.filter(i=>i.discarded);
   else if(listFilter==='today'){
-    const t=new Date(); const key=`${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
-    items=items.filter(i=>!i.discarded && i.expiry.slice(0,10)===key);
+    items=items.filter(i=>!i.discarded && dayDiff(i.expiry)===0);
   }
   items.sort((a,b)=> new Date(a.expiry)-new Date(b.expiry));
   if(items.length===0){ area.innerHTML='<div class="empty">該当する商品はありません</div>'; return; }
@@ -514,7 +533,7 @@ function renderList(){
     return `<div class="item ${i.discarded?'':st}">
       <div class="info">
         <div class="name">${esc(i.name)}</div>
-        <div class="meta">期限 ${fmtDT(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span></div>
+        <div class="meta">期限 ${fmtDate(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span></div>
       </div>
       <div class="qty">${i.qty}点</div>
       ${i.discarded
@@ -563,7 +582,7 @@ window.showDay=d=>{
   $('#sheetTitle').textContent=`${calM+1}月${d}日 の廃棄予定（${items.reduce((a,i)=>a+i.qty,0)}点）`;
   $('#sheetBody').innerHTML = items.length? items.map(i=>`
     <div class="item ${statusOf(i.expiry)}">
-      <div class="info"><div class="name">${esc(i.name)}</div><div class="meta">期限 ${fmtDT(i.expiry)}</div></div>
+      <div class="info"><div class="name">${esc(i.name)}</div><div class="meta">期限 ${fmtDate(i.expiry)}</div></div>
       <div class="qty">${i.qty}点</div>
     </div>`).join('') : '<div class="empty">予定はありません</div>';
   $('#modal').classList.add('show');

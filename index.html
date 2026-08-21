@@ -75,6 +75,9 @@
   .chip{background:#eef0f3; border:none; border-radius:20px; padding:8px 14px; font-size:14px; cursor:pointer;}
   .chip:active{background:#dde1e6;}
   .chip.on{background:var(--green); color:#fff;}
+  .imgrow{display:flex; align-items:center; gap:10px; margin-top:6px;}
+  #imgPreview{width:56px; height:56px; object-fit:cover; border-radius:10px; border:1px solid var(--line);}
+  .item .thumb{width:44px; height:44px; object-fit:cover; border-radius:8px; flex:0 0 auto; background:#eef0f3;}
 
   .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px;}
   .card h3{margin:0 0 4px; font-size:15px;}
@@ -162,6 +165,14 @@
       <label>商品名</label>
       <input id="pname" placeholder="例） 幕の内弁当">
       <div class="muted" id="masterNote" style="margin-top:4px"></div>
+
+      <label>商品画像（任意）</label>
+      <div class="imgrow">
+        <img id="imgPreview" alt="" style="display:none">
+        <label class="btn sec sm" for="imgInput" style="width:auto">📷 写真を追加</label>
+        <button type="button" id="imgClear" class="btn sec sm" style="width:auto; display:none">削除</button>
+        <input id="imgInput" type="file" accept="image/*" style="display:none">
+      </div>
 
       <label>廃棄日（期限）</label>
       <div class="chips" id="quickChips">
@@ -435,7 +446,8 @@ function onScanned(code){
   if(navigator.vibrate) navigator.vibrate(60);
   $('#jan').value = code;
   lookup(code);
-  $('#scanHint').textContent = '読み取り: '+code;
+  stopCam(); // 電池節約：読み取れたら自動でカメラを停止
+  showToast('読み取りました：'+code);
 }
 
 /* ============ 商品マスター参照 ============ */
@@ -445,6 +457,7 @@ function lookup(code){
   const m = DB.master();
   if(m[code]){
     $('#pname').value = m[code].name;
+    if(m[code].img){ currentImg = m[code].img; showImgPreview(); }
     $('#masterNote').textContent = '✓ 登録済み商品：自動入力しました';
     $('#masterNote').style.color = 'var(--green)';
   }else{
@@ -482,6 +495,41 @@ $('#edate').onchange = ()=> setActiveChip(document.querySelector('#quickChips .c
 $('#qtyMinus').onclick=()=>{ const q=$('#qty'); q.value=Math.max(1,(+q.value||1)-1); };
 $('#qtyPlus').onclick=()=>{ const q=$('#qty'); q.value=(+q.value||1)+1; };
 
+/* ============ 商品画像（任意・圧縮して保存） ============ */
+let currentImg = ''; // 登録予定の画像（data URL）／未設定は空
+function showImgPreview(){
+  const img=$('#imgPreview'), clr=$('#imgClear');
+  if(currentImg){ img.src=currentImg; img.style.display='block'; clr.style.display='inline-block'; }
+  else { img.removeAttribute('src'); img.style.display='none'; clr.style.display='none'; }
+}
+// 端末負荷とDB容量のため、最大400pxのJPEGに縮小
+function resizeImage(file, maxSize, quality){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      let w=img.width, h=img.height;
+      if(w>h){ if(w>maxSize){ h=Math.round(h*maxSize/w); w=maxSize; } }
+      else { if(h>maxSize){ w=Math.round(w*maxSize/h); h=maxSize; } }
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      res(cv.toDataURL('image/jpeg', quality));
+    };
+    img.onerror=rej;
+    img.src=url;
+  });
+}
+$('#imgInput').onchange = e=>{
+  const f = e.target.files && e.target.files[0];
+  if(!f){ return; }
+  resizeImage(f, 400, 0.6)
+    .then(d=>{ currentImg=d; showImgPreview(); })
+    .catch(()=> alert('画像を読み込めませんでした'));
+  e.target.value=''; // 同じ写真を選び直せるように
+};
+$('#imgClear').onclick = ()=>{ currentImg=''; showImgPreview(); };
+
 /* ============ 登録 ============ */
 $('#saveBtn').onclick = ()=>{
   const jan = $('#jan').value.trim();
@@ -493,14 +541,16 @@ $('#saveBtn').onclick = ()=>{
   if(!date){ alert('廃棄日を選んでください'); return; }
   // 日付管理。正午で保存し、日付のズレ（タイムゾーン）を防ぐ
   const expiry = new Date(`${date}T12:00:00`).toISOString();
+  const img = currentImg || '';
   const id = uid();
   const b = baseRef();
   // アイテム追加（共有DBへ。オフライン時は自動でキュー→復帰時に同期）
-  b.collection('items').doc(id).set({jan, name, expiry, qty, createdAt:new Date().toISOString(), discarded:false});
-  // マスター更新（次回から自動表示）
-  if(jan) b.collection('master').doc(jan).set({name});
+  b.collection('items').doc(id).set({jan, name, expiry, qty, img, createdAt:new Date().toISOString(), discarded:false});
+  // マスター更新（次回から自動表示。merge で既存の画像/名前を消さない）
+  if(jan) b.collection('master').doc(jan).set(img?{name, img}:{name}, {merge:true});
   // リセット
   $('#pname').value=''; $('#jan').value=''; $('#qty').value=1; $('#masterNote').textContent='';
+  currentImg=''; showImgPreview();
   $('#scanHint').textContent='バーコードを枠内に';
   if(navigator.vibrate) navigator.vibrate([40,40,40]);
   showToast(`登録しました：${name} ${qty}点`);
@@ -531,6 +581,7 @@ function renderList(){
     const st = i.discarded?'ok':statusOf(i.expiry);
     const badge = i.discarded?'済':(st==='over'?'超過':st==='soon'?'まもなく':'OK');
     return `<div class="item ${i.discarded?'':st}">
+      ${i.img?`<img class="thumb" src="${i.img}" alt="">`:''}
       <div class="info">
         <div class="name">${esc(i.name)}</div>
         <div class="meta">期限 ${fmtDate(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span></div>
@@ -582,6 +633,7 @@ window.showDay=d=>{
   $('#sheetTitle').textContent=`${calM+1}月${d}日 の廃棄予定（${items.reduce((a,i)=>a+i.qty,0)}点）`;
   $('#sheetBody').innerHTML = items.length? items.map(i=>`
     <div class="item ${statusOf(i.expiry)}">
+      ${i.img?`<img class="thumb" src="${i.img}" alt="">`:''}
       <div class="info"><div class="name">${esc(i.name)}</div><div class="meta">期限 ${fmtDate(i.expiry)}</div></div>
       <div class="qty">${i.qty}点</div>
     </div>`).join('') : '<div class="empty">予定はありません</div>';

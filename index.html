@@ -76,8 +76,10 @@
   .chip:active{background:#dde1e6;}
   .chip.on{background:var(--green); color:#fff;}
   .imgrow{display:flex; align-items:center; gap:10px; margin-top:6px;}
-  #imgPreview{width:56px; height:56px; object-fit:cover; border-radius:10px; border:1px solid var(--line);}
-  .item .thumb{width:44px; height:44px; object-fit:cover; border-radius:8px; flex:0 0 auto; background:#eef0f3;}
+  .imgrow img{width:56px; height:56px; object-fit:cover; border-radius:10px; border:1px solid var(--line);}
+  .item .thumb{width:44px; height:44px; object-fit:cover; border-radius:8px; flex:0 0 auto; background:#eef0f3; cursor:pointer;}
+  #imgModal{align-items:center; justify-content:center; padding:24px;}
+  #imgModal img{max-width:100%; max-height:85vh; border-radius:12px; box-shadow:0 8px 40px rgba(0,0,0,.5);}
 
   .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px;}
   .card h3{margin:0 0 4px; font-size:15px;}
@@ -244,6 +246,49 @@
   </div>
 </div>
 
+<!-- 画像拡大表示 -->
+<div class="modal" id="imgModal">
+  <img id="imgModalImg" alt="">
+</div>
+
+<!-- 商品編集モーダル -->
+<div class="modal" id="editModal">
+  <div class="sheet">
+    <h2>商品を編集</h2>
+    <label>商品名</label>
+    <input id="eName" placeholder="例） 幕の内弁当">
+
+    <label>廃棄日（期限）</label>
+    <div class="chips" id="eChips">
+      <button class="chip" data-preset="m0">今月末</button>
+      <button class="chip" data-preset="m1">来月末</button>
+      <button class="chip" data-preset="m2">再来月末</button>
+      <button class="chip" data-preset="custom">カスタム</button>
+    </div>
+    <div style="margin-top:8px"><input id="eDate" type="date"></div>
+
+    <label>個数</label>
+    <div class="row" style="align-items:center">
+      <button class="btn sec sm" id="eQtyMinus" style="flex:0 0 52px">−</button>
+      <input id="eQty" type="number" value="1" min="1" style="text-align:center">
+      <button class="btn sec sm" id="eQtyPlus" style="flex:0 0 52px">＋</button>
+    </div>
+
+    <label>商品画像（任意）</label>
+    <div class="imgrow">
+      <img id="eImgPreview" alt="" style="display:none">
+      <label class="btn sec sm" for="eImgInput" style="width:auto">📷 写真を変更</label>
+      <button type="button" id="eImgClear" class="btn sec sm" style="width:auto; display:none">削除</button>
+      <input id="eImgInput" type="file" accept="image/*" style="display:none">
+    </div>
+
+    <div class="row" style="margin-top:18px">
+      <button class="btn sec" id="eCancel">キャンセル</button>
+      <button class="btn" id="eSave">保存する</button>
+    </div>
+  </div>
+</div>
+
 <script src="vendor/firebase-app-compat.js"></script>
 <script src="vendor/firebase-auth-compat.js"></script>
 <script src="vendor/firebase-firestore-compat.js"></script>
@@ -314,20 +359,18 @@ const pad = n => String(n).padStart(2,'0');
 function toLocalInput(d){ return {date:`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`, time:`${pad(d.getHours())}:${pad(d.getMinutes())}`}; }
 function fmtDT(iso){ const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 function fmtDate(iso){ const d=new Date(iso); const w=['日','月','火','水','木','金','土'][d.getDay()]; return `${d.getMonth()+1}/${d.getDate()}(${w})`; }
-// 期限日と今日の「日数差」（0=今日, -1=昨日で超過, 1=明日）
-function dayDiff(iso){
-  const e=new Date(iso); e.setHours(0,0,0,0);
-  const t=new Date(); t.setHours(0,0,0,0);
-  return Math.round((e - t)/86400000);
-}
+// 廃棄日 = 期限の「前日」（例：期限8/22 → 廃棄日8/21）
+function discardDateObj(iso){ const d=new Date(iso); d.setHours(0,0,0,0); d.setDate(d.getDate()-1); return d; }
+// 廃棄日と今日の日数差（0=今日廃棄, 1=明日廃棄, -1=昨日で超過）
+function discardDiff(iso){ const t=new Date(); t.setHours(0,0,0,0); return Math.round((discardDateObj(iso) - t)/86400000); }
 function statusOf(iso){
-  const d = dayDiff(iso);
-  if(d < 0) return 'over';           // 期限日を過ぎた
-  if(d <= SOON_DAYS) return 'soon';  // 今日〜数日以内
+  const d = discardDiff(iso);
+  if(d < 0) return 'over';            // 廃棄日を過ぎた
+  if(d <= SOON_DAYS) return 'soon';   // 今日〜数日以内が廃棄日
   return 'ok';
 }
 function statusLabel(iso){
-  const d = dayDiff(iso);
+  const d = discardDiff(iso);
   if(d < 0) return `${-d}日超過`;
   if(d === 0) return '今日廃棄';
   if(d === 1) return '明日廃棄';
@@ -573,7 +616,7 @@ function renderList(){
   if(listFilter==='active') items=items.filter(i=>!i.discarded);
   else if(listFilter==='done') items=items.filter(i=>i.discarded);
   else if(listFilter==='today'){
-    items=items.filter(i=>!i.discarded && dayDiff(i.expiry)===0);
+    items=items.filter(i=>!i.discarded && discardDiff(i.expiry)===0);
   }
   items.sort((a,b)=> new Date(a.expiry)-new Date(b.expiry));
   if(items.length===0){ area.innerHTML='<div class="empty">該当する商品はありません</div>'; return; }
@@ -587,6 +630,7 @@ function renderList(){
         <div class="meta">期限 ${fmtDate(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span></div>
       </div>
       <div class="qty">${i.qty}点</div>
+      <button class="iconbtn" onclick="editItem('${i.id}')" title="編集">✏️</button>
       ${i.discarded
         ? `<button class="iconbtn" onclick="undiscard('${i.id}')" title="戻す">↩︎</button>`
         : `<button class="iconbtn" onclick="discard('${i.id}')" title="廃棄した">✅</button>`}
@@ -599,6 +643,66 @@ window.discard=id=>{ baseRef().collection('items').doc(id).update({discarded:tru
 window.undiscard=id=>{ baseRef().collection('items').doc(id).update({discarded:false}); };
 window.delItem=id=>{ if(!confirm('この記録を削除しますか？')) return; baseRef().collection('items').doc(id).delete(); };
 
+/* ============ 画像の拡大表示（サムネをタップ） ============ */
+function openImgLightbox(src){ $('#imgModalImg').src=src; $('#imgModal').classList.add('show'); }
+$('#imgModal').onclick=()=>$('#imgModal').classList.remove('show');
+function bindThumbZoom(container){
+  container.addEventListener('click', e=>{
+    if(e.target && e.target.classList && e.target.classList.contains('thumb')){ openImgLightbox(e.target.src); }
+  });
+}
+bindThumbZoom($('#listArea'));
+bindThumbZoom($('#sheetBody'));
+
+/* ============ 登録済み商品の編集 ============ */
+let editingId=null, editImg='';
+function ePreview(){
+  const im=$('#eImgPreview'), c=$('#eImgClear');
+  if(editImg){ im.src=editImg; im.style.display='block'; c.style.display='inline-block'; }
+  else { im.removeAttribute('src'); im.style.display='none'; c.style.display='none'; }
+}
+window.editItem=id=>{
+  const it=ITEMS.find(i=>i.id===id); if(!it) return;
+  editingId=id;
+  $('#eName').value=it.name;
+  const d=new Date(it.expiry);
+  $('#eDate').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  $('#eQty').value=it.qty;
+  editImg=it.img||''; ePreview();
+  document.querySelectorAll('#eChips .chip').forEach(c=>c.classList.remove('on'));
+  $('#editModal').classList.add('show');
+};
+document.querySelectorAll('#eChips .chip').forEach(c=>{
+  c.onclick=()=>{
+    const p=c.dataset.preset;
+    document.querySelectorAll('#eChips .chip').forEach(x=>x.classList.remove('on'));
+    if(p==='custom'){ c.classList.add('on'); const el=$('#eDate'); el.focus(); if(el.showPicker){ try{ el.showPicker(); }catch(e){} } return; }
+    const offset=p==='m0'?0 : p==='m1'?1 : 2;
+    $('#eDate').value=toLocalInput(monthEndDate(offset)).date;
+    c.classList.add('on');
+  };
+});
+$('#eDate').onchange=()=>{ document.querySelectorAll('#eChips .chip').forEach(x=>x.classList.remove('on')); document.querySelector('#eChips .chip[data-preset="custom"]').classList.add('on'); };
+$('#eQtyMinus').onclick=()=>{ const q=$('#eQty'); q.value=Math.max(1,(+q.value||1)-1); };
+$('#eQtyPlus').onclick=()=>{ const q=$('#eQty'); q.value=(+q.value||1)+1; };
+$('#eImgInput').onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(!f) return; resizeImage(f,400,0.6).then(d=>{ editImg=d; ePreview(); }).catch(()=>alert('画像を読み込めませんでした')); e.target.value=''; };
+$('#eImgClear').onclick=()=>{ editImg=''; ePreview(); };
+$('#eCancel').onclick=()=>{ $('#editModal').classList.remove('show'); editingId=null; };
+$('#editModal').onclick=e=>{ if(e.target.id==='editModal'){ $('#editModal').classList.remove('show'); editingId=null; } };
+$('#eSave').onclick=()=>{
+  if(!editingId) return;
+  const name=$('#eName').value.trim(), date=$('#eDate').value, qty=Math.max(1,+$('#eQty').value||1);
+  if(!name){ alert('商品名を入力してください'); return; }
+  if(!date){ alert('廃棄日を選んでください'); return; }
+  const expiry=new Date(`${date}T12:00:00`).toISOString();
+  const it=ITEMS.find(i=>i.id===editingId);
+  const b=baseRef();
+  b.collection('items').doc(editingId).update({name, expiry, qty, img:editImg});
+  if(it && it.jan) b.collection('master').doc(it.jan).set(editImg?{name, img:editImg}:{name}, {merge:true});
+  $('#editModal').classList.remove('show'); editingId=null;
+  showToast('更新しました');
+};
+
 /* ============ カレンダー ============ */
 let calY, calM; // 表示中の年月
 (function(){ const n=new Date(); calY=n.getFullYear(); calM=n.getMonth(); })();
@@ -610,7 +714,7 @@ function renderCal(){
   const days=new Date(calY,calM+1,0).getDate();
   const items=DB.items().filter(i=>!i.discarded);
   const byDay={};
-  items.forEach(i=>{ const d=new Date(i.expiry); if(d.getFullYear()===calY&&d.getMonth()===calM){ const k=d.getDate(); byDay[k]=(byDay[k]||0)+i.qty; } });
+  items.forEach(i=>{ const d=discardDateObj(i.expiry); if(d.getFullYear()===calY&&d.getMonth()===calM){ const k=d.getDate(); byDay[k]=(byDay[k]||0)+i.qty; } });
   const today=new Date();
   const dows=['日','月','火','水','木','金','土'];
   let html = dows.map((d,i)=>`<div class="dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
@@ -628,8 +732,7 @@ function renderCal(){
   $('#dayDetail').innerHTML='';
 }
 window.showDay=d=>{
-  const key=`${calY}-${pad(calM+1)}-${pad(d)}`;
-  const items=DB.items().filter(i=>!i.discarded && i.expiry.slice(0,10)===key).sort((a,b)=>new Date(a.expiry)-new Date(b.expiry));
+  const items=DB.items().filter(i=>{ if(i.discarded) return false; const dd=discardDateObj(i.expiry); return dd.getFullYear()===calY && dd.getMonth()===calM && dd.getDate()===d; }).sort((a,b)=>new Date(a.expiry)-new Date(b.expiry));
   $('#sheetTitle').textContent=`${calM+1}月${d}日 の廃棄予定（${items.reduce((a,i)=>a+i.qty,0)}点）`;
   $('#sheetBody').innerHTML = items.length? items.map(i=>`
     <div class="item ${statusOf(i.expiry)}">

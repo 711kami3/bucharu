@@ -307,12 +307,20 @@ async function startCam(){
       v.srcObject=stream; await v.play(); showUI();
       scanning=true; loopDetect();
     } else if(window.ZXing){
-      // iPhone Safari 等：ZXingライブラリで読取
-      zxingReader = new ZXing.BrowserMultiFormatReader();
+      // iPhone Safari 等：ZXingライブラリで読取（1D/JAN最適化）
+      const hints = new Map();
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+        ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
+        ZXing.BarcodeFormat.CODE_128
+      ]);
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      zxingReader = new ZXing.BrowserMultiFormatReader(hints, 250);
+      v.setAttribute('playsinline',''); v.muted = true;
       showUI(); scanning=true;
-      $('#scanHint').textContent='バーコードを枠内に';
+      $('#scanHint').textContent='バーコードにピントを合わせて枠内へ';
       await zxingReader.decodeFromConstraints(
-        {video:{facingMode:'environment'}}, v,
+        { video: { facingMode:'environment', width:{ideal:1920}, height:{ideal:1080} } }, v,
         (result)=>{ if(result) onScanned(result.getText()); }
       );
     } else {

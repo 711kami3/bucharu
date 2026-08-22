@@ -105,7 +105,17 @@
   .iconbtn:active{background:#eef0f3;}
 
   .seg{display:flex; background:#eef0f3; border-radius:10px; padding:4px; margin-bottom:14px;}
-  .seg button{flex:1; border:none; background:none; padding:9px 4px; border-radius:8px; font-size:13px; font-weight:600; color:var(--gray); cursor:pointer; white-space:nowrap;}
+  .seg button{flex:1; border:none; background:none; padding:9px 2px; border-radius:8px; font-size:12px; font-weight:600; color:var(--gray); cursor:pointer; white-space:nowrap;}
+  .repeatToggle{display:flex; align-items:center; justify-content:space-between; gap:12px; background:#f7f8fa; border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:16px;}
+  .rt-title{font-weight:700; font-size:14px;}
+  .rt-sub{font-size:12px; color:var(--gray); margin-top:2px;}
+  .switch{position:relative; display:inline-block; width:50px; height:30px; flex:0 0 auto;}
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{position:absolute; inset:0; background:#cfd4da; border-radius:30px; transition:.2s;}
+  .slider:before{content:""; position:absolute; height:24px; width:24px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s;}
+  .switch input:checked + .slider{background:var(--green);}
+  .switch input:checked + .slider:before{transform:translateX(20px);}
+  .reptag{display:inline-block; margin-left:6px; font-size:11px; font-weight:700; color:var(--green); background:#e3f5ea; border-radius:20px; padding:2px 8px; vertical-align:middle;}
   .seg button.on{background:#fff; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.08);}
 
   /* カレンダー */
@@ -168,16 +178,12 @@
         <button class="btn sec sm" id="lookupBtn" style="flex:0 0 auto">確認</button>
       </div>
 
-      <label>商品名</label>
-      <input id="pname" placeholder="例） 幕の内弁当">
-      <div class="muted" id="masterNote" style="margin-top:4px"></div>
-
-      <label>商品画像（任意）</label>
-      <div class="imgrow">
-        <img id="imgPreview" alt="" style="display:none">
-        <label class="btn sec sm" for="imgInput" style="width:auto">📷 写真を追加</label>
-        <button type="button" id="imgClear" class="btn sec sm" style="width:auto; display:none">削除</button>
-        <input id="imgInput" type="file" accept="image/*" style="display:none">
+      <div class="repeatToggle">
+        <div>
+          <div class="rt-title">繰り返し商品</div>
+          <div class="rt-sub">和菓子・珍味など鮮度が短い商品</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="repeatChk"><span class="slider"></span></label>
       </div>
 
       <label>廃棄日（期限）</label>
@@ -189,6 +195,18 @@
       </div>
       <div style="margin-top:8px">
         <input id="edate" type="date">
+      </div>
+
+      <label>商品名</label>
+      <input id="pname" placeholder="例） 幕の内弁当">
+      <div class="muted" id="masterNote" style="margin-top:4px"></div>
+
+      <label>商品画像（任意）</label>
+      <div class="imgrow">
+        <img id="imgPreview" alt="" style="display:none">
+        <label class="btn sec sm" for="imgInput" style="width:auto">📷 写真を追加</label>
+        <button type="button" id="imgClear" class="btn sec sm" style="width:auto; display:none">削除</button>
+        <input id="imgInput" type="file" accept="image/*" style="display:none">
       </div>
 
       <label>個数</label>
@@ -208,6 +226,7 @@
       <button class="on" data-f="active">未廃棄</button>
       <button data-f="today">今日廃棄</button>
       <button data-f="tomorrow">明日廃棄</button>
+      <button data-f="repeat">繰り返し</button>
       <button data-f="done">廃棄済み</button>
     </div>
     <div id="listArea"></div>
@@ -290,6 +309,37 @@
     <div class="row" style="margin-top:18px">
       <button class="btn sec" id="eCancel">キャンセル</button>
       <button class="btn" id="eSave">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 繰り返し商品：次の廃棄日 -->
+<div class="modal" id="nextModal">
+  <div class="sheet">
+    <h2>次の廃棄日</h2>
+    <p class="muted" style="margin:0 0 12px">この繰り返し商品の、次の直近の廃棄日を入力してください。</p>
+    <div class="chips" id="nChips">
+      <button class="chip" data-d="1">明日</button>
+      <button class="chip" data-d="2">明後日</button>
+      <button class="chip" data-d="3">3日後</button>
+      <button class="chip" data-d="custom">カスタム</button>
+    </div>
+    <div style="margin-top:8px"><input id="nDate" type="date"></div>
+    <div class="row" style="margin-top:18px">
+      <button class="btn sec" id="nCancel">キャンセル</button>
+      <button class="btn" id="nSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 確認ダイアログ（iOSアプリ内でも動く自前版） -->
+<div class="modal" id="confirmModal">
+  <div class="sheet">
+    <h2 id="confirmTitle">確認</h2>
+    <p class="muted" id="confirmMsg" style="margin:0 0 16px; line-height:1.6"></p>
+    <div class="row">
+      <button class="btn sec" id="confirmNo">キャンセル</button>
+      <button class="btn" id="confirmYes" style="background:var(--red)">削除する</button>
     </div>
   </div>
 </div>
@@ -389,6 +439,8 @@ function statusLabel(iso){
   if(d === 1) return '明日廃棄';
   return `あと${d}日`;
 }
+// 個数（未入力=nullは集計上1として数える）
+function qtyOf(i){ return i.qty==null ? 1 : i.qty; }
 
 /* ============ タブ切替 ============ */
 document.querySelectorAll('nav button').forEach(b=>{
@@ -415,8 +467,8 @@ function checkAlerts(){
   const over = soon.filter(i=>statusOf(i.expiry)==='over');
   const near = soon.filter(i=>statusOf(i.expiry)==='soon');
   let html = '⚠️ ';
-  if(over.length) html += `<b>期限超過 ${over.reduce((a,i)=>a+i.qty,0)}点</b> `;
-  if(near.length) html += `／ まもなく ${near.reduce((a,i)=>a+i.qty,0)}点`;
+  if(over.length) html += `<b>期限超過 ${over.reduce((a,i)=>a+qtyOf(i),0)}点</b> `;
+  if(near.length) html += `／ まもなく ${near.reduce((a,i)=>a+qtyOf(i),0)}点`;
   html += `<br><span class="muted">`+ soon.slice(0,3).map(i=>`${i.name}(${statusLabel(i.expiry)})`).join('・') + (soon.length>3?' 他':'') +`</span>`;
   banner.innerHTML = html; banner.classList.add('show');
   // ブラウザ通知（許可時のみ・重複防止）
@@ -433,9 +485,36 @@ function checkAlerts(){
 setInterval(checkAlerts, 30000);
 
 /* ============ カメラ / バーコード ============ */
-let stream=null, scanning=false, detector=null, zxingReader=null;
+let stream=null, scanning=false, detector=null, zxTimer=null;
 if('BarcodeDetector' in window){
   detector = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','codabar','itf']});
+}
+// iPhone等（ZXing）用：多形式リーダー＋「向き自由」の自前ループ
+let mfReader=null, zxHints=null;
+if(window.ZXing){
+  zxHints=new Map();
+  zxHints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,ZXing.BarcodeFormat.CODE_128]);
+  zxHints.set(ZXing.DecodeHintType.TRY_HARDER,true);
+  mfReader=new ZXing.MultiFormatReader(); mfReader.setHints(zxHints);
+}
+const _zc=document.createElement('canvas'), _zr=document.createElement('canvas');
+function zxDecode(cv){
+  try{ const s=new ZXing.HTMLCanvasElementLuminanceSource(cv); const b=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(s)); const r=mfReader.decode(b, zxHints); return r?r.getText():null; }
+  catch(e){ return null; } finally{ try{ mfReader.reset(); }catch(e){} }
+}
+function drawRot90(src,w,h){ _zr.width=h; _zr.height=w; const c=_zr.getContext('2d'); c.translate(h/2,w/2); c.rotate(Math.PI/2); c.drawImage(src,-w/2,-h/2,w,h); return _zr; }
+function zxLoop(){
+  if(!scanning || !mfReader) return;
+  const v=$('#video');
+  if(v.videoWidth){
+    let w=v.videoWidth, h=v.videoHeight, dw=w, dh=h; const maxW=1080;
+    if(w>maxW){ dh=Math.round(h*maxW/w); dw=maxW; }
+    _zc.width=dw; _zc.height=dh; _zc.getContext('2d').drawImage(v,0,0,dw,dh);
+    let code=zxDecode(_zc);
+    if(!code) code=zxDecode(drawRot90(_zc,dw,dh)); // 向きが違えば90°回して再挑戦
+    if(code){ const now=Date.now(); if(code!==lastCode||now-lastTime>2500){ lastCode=code; lastTime=now; onScanned(code); return; } }
+  }
+  zxTimer=setTimeout(()=>{ if(scanning) requestAnimationFrame(zxLoop); }, 110);
 }
 $('#startCam').onclick = startCam;
 $('#stopCam').onclick = stopCam;
@@ -449,34 +528,24 @@ async function startCam(){
       stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
       v.srcObject=stream; await v.play(); showUI();
       scanning=true; loopDetect();
-    } else if(window.ZXing){
-      // iPhone Safari 等：ZXingライブラリで読取（1D/JAN最適化）
-      const hints = new Map();
-      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-        ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
-        ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
-        ZXing.BarcodeFormat.CODE_128
-      ]);
-      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-      zxingReader = new ZXing.BrowserMultiFormatReader(hints, 250);
-      v.setAttribute('playsinline',''); v.muted = true;
+    } else if(mfReader){
+      // iPhone Safari 等：向き自由の自前ループで読取（縦横どちらでもOK）
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment', width:{ideal:1920}, height:{ideal:1080}}});
+      v.srcObject=stream; v.muted=true; v.setAttribute('playsinline',''); await v.play();
       showUI(); scanning=true;
-      $('#scanHint').textContent='バーコードにピントを合わせて枠内へ';
-      await zxingReader.decodeFromConstraints(
-        { video: { facingMode:'environment', width:{ideal:1920}, height:{ideal:1080} } }, v,
-        (result)=>{ if(result) onScanned(result.getText()); }
-      );
+      $('#scanHint').textContent='バーコードを枠内へ（向きは自由）';
+      zxLoop();
     } else {
       // 読取エンジンが無い端末：番号手入力で運用
       showUI();
       $('#scanHint').textContent='この端末は自動読取に非対応。番号は手入力してください';
     }
     if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
-  }catch(e){ alert('カメラを起動できませんでした。\nHTTPS環境か、カメラ権限をご確認ください。\n（番号の手入力でも登録できます）'); }
+  }catch(e){ showToast('カメラを起動できませんでした。\nHTTPS環境か、カメラ権限をご確認ください。\n（番号の手入力でも登録できます）'); }
 }
 function stopCam(){
   scanning=false;
-  if(zxingReader){ try{ zxingReader.reset(); }catch(e){} zxingReader=null; }
+  if(zxTimer){ clearTimeout(zxTimer); zxTimer=null; }
   if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
   const v=$('#video'); v.style.display='none'; $('#frame').style.display='none'; $('#scanHint').style.display='none';
   $('#scanPlaceholder').style.display='block';
@@ -550,6 +619,8 @@ document.querySelectorAll('#quickChips .chip').forEach(c=>{
 $('#edate').onchange = ()=> setActiveChip(document.querySelector('#quickChips .chip[data-preset="custom"]'));
 $('#qtyMinus').onclick=()=>{ const q=$('#qty'); q.value=Math.max(1,(+q.value||1)-1); };
 $('#qtyPlus').onclick=()=>{ const q=$('#qty'); q.value=(+q.value||1)+1; };
+// 繰り返しをONにしたら個数を自動で空欄に（毎回「1」を消す手間をなくす）
+$('#repeatChk').onchange=()=>{ $('#qty').value = $('#repeatChk').checked ? '' : 1; };
 
 /* ============ 商品画像（任意・圧縮して保存） ============ */
 let currentImg = ''; // 登録予定の画像（data URL）／未設定は空
@@ -581,7 +652,7 @@ $('#imgInput').onchange = e=>{
   if(!f){ return; }
   resizeImage(f, 400, 0.6)
     .then(d=>{ currentImg=d; showImgPreview(); })
-    .catch(()=> alert('画像を読み込めませんでした'));
+    .catch(()=> showToast('画像を読み込めませんでした'));
   e.target.value=''; // 同じ写真を選び直せるように
 };
 $('#imgClear').onclick = ()=>{ currentImg=''; showImgPreview(); };
@@ -591,25 +662,28 @@ $('#saveBtn').onclick = ()=>{
   const jan = $('#jan').value.trim();
   const name = $('#pname').value.trim();
   const date = $('#edate').value;
-  const qty = Math.max(1, +$('#qty').value||1);
+  const qtyRaw = $('#qty').value.trim();
+  const qty = qtyRaw==='' ? null : Math.max(1, +qtyRaw||1); // 空欄OK（繰り返し商品など）
+  const repeat = $('#repeatChk').checked;
   if(!getStore()){ openStoreGate(); return; }
-  if(!name){ alert('商品名を入力してください'); return; }
-  if(!date){ alert('廃棄日を選んでください'); return; }
+  if(!name){ showToast('商品名を入力してください'); return; }
+  if(!date){ showToast('廃棄日を選んでください'); return; }
   // 日付管理。正午で保存し、日付のズレ（タイムゾーン）を防ぐ
   const expiry = new Date(`${date}T12:00:00`).toISOString();
   const img = currentImg || '';
   const id = uid();
   const b = baseRef();
   // アイテム追加（共有DBへ。オフライン時は自動でキュー→復帰時に同期）
-  b.collection('items').doc(id).set({jan, name, expiry, qty, img, createdAt:new Date().toISOString(), discarded:false});
+  b.collection('items').doc(id).set({jan, name, expiry, qty, img, repeat, createdAt:new Date().toISOString(), discarded:false});
   // マスター更新（次回から自動表示。merge で既存の画像/名前を消さない）
   if(jan) b.collection('master').doc(jan).set(img?{name, img}:{name}, {merge:true});
   // リセット
   $('#pname').value=''; $('#jan').value=''; $('#qty').value=1; $('#masterNote').textContent='';
+  $('#repeatChk').checked=false;
   currentImg=''; showImgPreview();
   $('#scanHint').textContent='バーコードを枠内に';
   if(navigator.vibrate) navigator.vibrate([40,40,40]);
-  showToast(`登録しました：${name} ${qty}点`);
+  showToast(`登録しました：${name}${qty!=null?` ${qty}点`:''}`);
 };
 function showToast(msg){
   const t=document.createElement('div');
@@ -634,6 +708,9 @@ function renderList(){
   else if(listFilter==='tomorrow'){
     items=items.filter(i=>!i.discarded && discardDiff(i.expiry)===1);
   }
+  else if(listFilter==='repeat'){
+    items=items.filter(i=>i.repeat && !i.discarded);
+  }
   items.sort((a,b)=> new Date(a.expiry)-new Date(b.expiry));
   if(items.length===0){ area.innerHTML='<div class="empty">該当する商品はありません</div>'; return; }
   area.innerHTML = items.map(i=>{
@@ -643,9 +720,9 @@ function renderList(){
       ${i.img?`<img class="thumb" src="${i.img}" alt="">`:''}
       <div class="info">
         <div class="name">${esc(i.name)}</div>
-        <div class="meta">期限 ${fmtDate(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span></div>
+        <div class="meta">期限 ${fmtDate(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span>${i.repeat?'<span class="reptag">繰り返し</span>':''}</div>
       </div>
-      <div class="qty">${i.qty}点</div>
+      <div class="qty">${i.qty!=null?`${i.qty}点`:'—'}</div>
       <button class="iconbtn" onclick="editItem('${i.id}')" title="編集" aria-label="編集">${IC.edit}</button>
       ${i.discarded
         ? `<button class="iconbtn" onclick="undiscard('${i.id}')" title="戻す" aria-label="戻す">${IC.undo}</button>`
@@ -655,9 +732,18 @@ function renderList(){
   }).join('');
 }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-window.discard=id=>{ baseRef().collection('items').doc(id).update({discarded:true, discardedAt:new Date().toISOString()}); };
+window.discard=id=>{
+  const it=ITEMS.find(i=>i.id===id);
+  if(it && it.repeat){ openNextDate(id); return; } // 繰り返し商品は「次の廃棄日」を入力して継続
+  baseRef().collection('items').doc(id).update({discarded:true, discardedAt:new Date().toISOString()});
+};
 window.undiscard=id=>{ baseRef().collection('items').doc(id).update({discarded:false}); };
-window.delItem=id=>{ if(!confirm('この記録を削除しますか？')) return; baseRef().collection('items').doc(id).delete(); };
+let _confirmCb=null;
+function appConfirm(msg, cb){ $('#confirmMsg').textContent=msg; _confirmCb=cb; $('#confirmModal').classList.add('show'); }
+$('#confirmYes').onclick=()=>{ $('#confirmModal').classList.remove('show'); const cb=_confirmCb; _confirmCb=null; if(cb) cb(); };
+$('#confirmNo').onclick=()=>{ $('#confirmModal').classList.remove('show'); _confirmCb=null; };
+$('#confirmModal').onclick=e=>{ if(e.target.id==='confirmModal'){ $('#confirmModal').classList.remove('show'); _confirmCb=null; } };
+window.delItem=id=>{ appConfirm('この記録を削除しますか？', ()=> baseRef().collection('items').doc(id).delete()); };
 
 /* ============ 画像の拡大表示（サムネをタップ） ============ */
 function openImgLightbox(src){ $('#imgModalImg').src=src; $('#imgModal').classList.add('show'); }
@@ -683,7 +769,7 @@ window.editItem=id=>{
   $('#eName').value=it.name;
   const d=new Date(it.expiry);
   $('#eDate').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  $('#eQty').value=it.qty;
+  $('#eQty').value = it.qty==null ? '' : it.qty;
   editImg=it.img||''; ePreview();
   document.querySelectorAll('#eChips .chip').forEach(c=>c.classList.remove('on'));
   $('#editModal').classList.add('show');
@@ -701,15 +787,16 @@ document.querySelectorAll('#eChips .chip').forEach(c=>{
 $('#eDate').onchange=()=>{ document.querySelectorAll('#eChips .chip').forEach(x=>x.classList.remove('on')); document.querySelector('#eChips .chip[data-preset="custom"]').classList.add('on'); };
 $('#eQtyMinus').onclick=()=>{ const q=$('#eQty'); q.value=Math.max(1,(+q.value||1)-1); };
 $('#eQtyPlus').onclick=()=>{ const q=$('#eQty'); q.value=(+q.value||1)+1; };
-$('#eImgInput').onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(!f) return; resizeImage(f,400,0.6).then(d=>{ editImg=d; ePreview(); }).catch(()=>alert('画像を読み込めませんでした')); e.target.value=''; };
+$('#eImgInput').onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(!f) return; resizeImage(f,400,0.6).then(d=>{ editImg=d; ePreview(); }).catch(()=>showToast('画像を読み込めませんでした')); e.target.value=''; };
 $('#eImgClear').onclick=()=>{ editImg=''; ePreview(); };
 $('#eCancel').onclick=()=>{ $('#editModal').classList.remove('show'); editingId=null; };
 $('#editModal').onclick=e=>{ if(e.target.id==='editModal'){ $('#editModal').classList.remove('show'); editingId=null; } };
 $('#eSave').onclick=()=>{
   if(!editingId) return;
-  const name=$('#eName').value.trim(), date=$('#eDate').value, qty=Math.max(1,+$('#eQty').value||1);
-  if(!name){ alert('商品名を入力してください'); return; }
-  if(!date){ alert('廃棄日を選んでください'); return; }
+  const name=$('#eName').value.trim(), date=$('#eDate').value;
+  const eQtyRaw=$('#eQty').value.trim(); const qty = eQtyRaw==='' ? null : Math.max(1,+eQtyRaw||1);
+  if(!name){ showToast('商品名を入力してください'); return; }
+  if(!date){ showToast('廃棄日を選んでください'); return; }
   const expiry=new Date(`${date}T12:00:00`).toISOString();
   const it=ITEMS.find(i=>i.id===editingId);
   const b=baseRef();
@@ -717,6 +804,34 @@ $('#eSave').onclick=()=>{
   if(it && it.jan) b.collection('master').doc(it.jan).set(editImg?{name, img:editImg}:{name}, {merge:true});
   $('#editModal').classList.remove('show'); editingId=null;
   showToast('更新しました');
+};
+
+/* ============ 繰り返し商品：次の廃棄日を入力 ============ */
+let nextId=null;
+function addDays(n){ const d=new Date(); d.setDate(d.getDate()+n); return d; }
+function openNextDate(id){
+  nextId=id;
+  $('#nDate').value=toLocalInput(addDays(1)).date;
+  document.querySelectorAll('#nChips .chip').forEach(c=>c.classList.remove('on'));
+  $('#nextModal').classList.add('show');
+}
+document.querySelectorAll('#nChips .chip').forEach(c=>{
+  c.onclick=()=>{
+    const p=c.dataset.d;
+    document.querySelectorAll('#nChips .chip').forEach(x=>x.classList.remove('on'));
+    if(p==='custom'){ c.classList.add('on'); const el=$('#nDate'); el.focus(); if(el.showPicker){ try{ el.showPicker(); }catch(e){} } return; }
+    $('#nDate').value=toLocalInput(addDays(+p)).date; c.classList.add('on');
+  };
+});
+$('#nCancel').onclick=()=>{ $('#nextModal').classList.remove('show'); nextId=null; };
+$('#nextModal').onclick=e=>{ if(e.target.id==='nextModal'){ $('#nextModal').classList.remove('show'); nextId=null; } };
+$('#nSave').onclick=()=>{
+  if(!nextId) return;
+  const date=$('#nDate').value; if(!date){ showToast('日付を選んでください'); return; }
+  const expiry=new Date(`${date}T12:00:00`).toISOString();
+  baseRef().collection('items').doc(nextId).update({expiry});
+  $('#nextModal').classList.remove('show'); nextId=null;
+  showToast('次の廃棄日を更新しました');
 };
 
 /* ============ カレンダー ============ */
@@ -730,7 +845,7 @@ function renderCal(){
   const days=new Date(calY,calM+1,0).getDate();
   const items=DB.items().filter(i=>!i.discarded);
   const byDay={};
-  items.forEach(i=>{ const d=discardDateObj(i.expiry); if(d.getFullYear()===calY&&d.getMonth()===calM){ const k=d.getDate(); byDay[k]=(byDay[k]||0)+i.qty; } });
+  items.forEach(i=>{ const d=discardDateObj(i.expiry); if(d.getFullYear()===calY&&d.getMonth()===calM){ const k=d.getDate(); byDay[k]=(byDay[k]||0)+qtyOf(i); } });
   const today=new Date();
   const dows=['日','月','火','水','木','金','土'];
   let html = dows.map((d,i)=>`<div class="dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
@@ -749,12 +864,12 @@ function renderCal(){
 }
 window.showDay=d=>{
   const items=DB.items().filter(i=>{ if(i.discarded) return false; const dd=discardDateObj(i.expiry); return dd.getFullYear()===calY && dd.getMonth()===calM && dd.getDate()===d; }).sort((a,b)=>new Date(a.expiry)-new Date(b.expiry));
-  $('#sheetTitle').textContent=`${calM+1}月${d}日 の廃棄予定（${items.reduce((a,i)=>a+i.qty,0)}点）`;
+  $('#sheetTitle').textContent=`${calM+1}月${d}日 の廃棄予定（${items.reduce((a,i)=>a+qtyOf(i),0)}点）`;
   $('#sheetBody').innerHTML = items.length? items.map(i=>`
     <div class="item ${statusOf(i.expiry)}">
       ${i.img?`<img class="thumb" src="${i.img}" alt="">`:''}
-      <div class="info"><div class="name">${esc(i.name)}</div><div class="meta">期限 ${fmtDate(i.expiry)}</div></div>
-      <div class="qty">${i.qty}点</div>
+      <div class="info"><div class="name">${esc(i.name)}</div><div class="meta">期限 ${fmtDate(i.expiry)}${i.repeat?'<span class="reptag">繰り返し</span>':''}</div></div>
+      <div class="qty">${i.qty!=null?`${i.qty}点`:'—'}</div>
     </div>`).join('') : '<div class="empty">予定はありません</div>';
   $('#modal').classList.add('show');
 };
@@ -770,7 +885,7 @@ $('#modal').onclick=e=>{ if(e.target.id==='modal') $('#modal').classList.remove(
   $('#storeBtn').onclick=()=>openStoreGate();
   $('#storeSave').onclick=()=>{
     let code=$('#storeInput').value.trim().toLowerCase().replace(/[^a-z0-9_\-]/g,'');
-    if(code.length<3){ alert('3文字以上の英数字で入力してください（例：kofu-kamiishida）'); return; }
+    if(code.length<3){ showToast('3文字以上の英数字で入力してください（例：kofu-kamiishida）'); return; }
     setStore(code); updateStoreLabel();
     $('#storeGate').classList.remove('show');
     if(fbAuth.currentUser) startSync();

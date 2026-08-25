@@ -63,6 +63,8 @@
     width:100%; padding:12px; border:1.5px solid var(--line); border-radius:10px;
     background:#fff; color:var(--text);
   }
+  /* iOSで日付入力の枠がはみ出すのを防ぐ */
+  input[type="date"]{ -webkit-appearance:none; appearance:none; min-width:0; max-width:100%; }
   input:focus,select:focus{outline:none; border-color:var(--green);}
   .btn{
     border:none; border-radius:10px; padding:13px; font-weight:700; color:#fff;
@@ -90,7 +92,7 @@
   .item.ok{border-left-color:var(--green);}
   .item.soon{border-left-color:var(--orange); background:#fffaf2;}
   .item.over{border-left-color:var(--red); background:#fdf1f0;}
-  .item .info{flex:1; min-width:0;}
+  .item .info{flex:1; min-width:0; cursor:pointer;}
   .item .info .name{font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .item .info .meta{font-size:13px; color:var(--gray); margin-top:2px;}
   .item .badge{font-size:12px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap;}
@@ -98,14 +100,15 @@
   .badge.soon{background:#ffe9cc; color:var(--orange);}
   .badge.over{background:#fbdedb; color:var(--red);}
   .item .qty{font-size:14px; font-weight:700; min-width:36px; text-align:right;}
-  .iconbtn{background:none; border:none; padding:8px; cursor:pointer; color:var(--gray); border-radius:8px; display:inline-flex; align-items:center;}
+  .iconbtn{background:none; border:none; padding:6px 8px; cursor:pointer; color:var(--gray); border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; gap:2px;}
   .iconbtn svg{width:20px; height:20px; display:block;}
+  .iconbtn .ib-label{font-size:10px; font-weight:700; line-height:1;}
   .iconbtn.ok{color:var(--green);}
   .iconbtn.danger{color:var(--red);}
   .iconbtn:active{background:#eef0f3;}
 
   .seg{display:flex; background:#eef0f3; border-radius:10px; padding:4px; margin-bottom:14px;}
-  .seg button{flex:1; border:none; background:none; padding:9px 2px; border-radius:8px; font-size:12px; font-weight:600; color:var(--gray); cursor:pointer; white-space:nowrap;}
+  .seg button{flex:1; border:none; background:none; padding:9px 4px; border-radius:8px; font-size:14px; font-weight:600; color:var(--gray); cursor:pointer; white-space:nowrap;}
   .repeatToggle{display:flex; align-items:center; justify-content:space-between; gap:12px; background:#f7f8fa; border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:16px;}
   .rt-title{font-weight:700; font-size:14px;}
   .rt-sub{font-size:12px; color:var(--gray); margin-top:2px;}
@@ -232,8 +235,6 @@
   <section class="tab" id="tab-list">
     <div class="seg" id="listSeg">
       <button class="on" data-f="active">未廃棄</button>
-      <button data-f="today">今日廃棄</button>
-      <button data-f="tomorrow">明日廃棄</button>
       <button data-f="repeat">繰り返し</button>
       <button data-f="done">廃棄済み</button>
     </div>
@@ -703,7 +704,9 @@ function showToast(msg){
 
 /* ============ 一覧 ============ */
 let listFilter='active';
-let collapsedMonths=new Set(); // 閉じている月（既定は全て開く）
+let collapsedMonths=new Set(); // 閉じている月
+let seenMonths=new Set();       // 既定状態（当月だけ開く）を一度だけ適用するための記録
+function currentMonthKey(){ const d=new Date(); return `${d.getFullYear()}-${d.getMonth()}`; }
 document.querySelectorAll('#listSeg button').forEach(b=>{
   b.onclick=()=>{ document.querySelectorAll('#listSeg button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); listFilter=b.dataset.f; renderList(); };
 });
@@ -711,16 +714,15 @@ function itemHTML(i){
   const st = i.discarded?'ok':statusOf(i.expiry);
   return `<div class="item ${i.discarded?'':st}">
       ${i.img?`<img class="thumb" src="${i.img}" alt="">`:''}
-      <div class="info">
+      <div class="info" onclick="editItem('${i.id}')" title="タップで編集">
         <div class="name">${esc(i.name)}</div>
         <div class="meta">期限 ${fmtDate(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span>${i.repeat?'<span class="reptag">繰り返し</span>':''}</div>
       </div>
       <div class="qty">${i.qty!=null?`${i.qty}点`:'—'}</div>
-      <button class="iconbtn" onclick="editItem('${i.id}')" title="編集" aria-label="編集">${IC.edit}</button>
       ${i.discarded
-        ? `<button class="iconbtn" onclick="undiscard('${i.id}')" title="戻す" aria-label="戻す">${IC.undo}</button>`
-        : `<button class="iconbtn ok" onclick="discard('${i.id}')" title="廃棄した" aria-label="廃棄した">${IC.check}</button>`}
-      <button class="iconbtn danger" onclick="delItem('${i.id}')" title="削除" aria-label="削除">${IC.trash}</button>
+        ? `<button class="iconbtn" onclick="undiscard('${i.id}')" aria-label="戻す">${IC.undo}<span class="ib-label">戻す</span></button>`
+        : `<button class="iconbtn ok" onclick="discard('${i.id}')" aria-label="廃棄">${IC.check}<span class="ib-label">廃棄</span></button>`}
+      <button class="iconbtn danger" onclick="delItem('${i.id}')" aria-label="削除">${IC.trash}<span class="ib-label">削除</span></button>
     </div>`;
 }
 function renderList(){
@@ -728,12 +730,6 @@ function renderList(){
   const area=$('#listArea');
   if(listFilter==='active') items=items.filter(i=>!i.discarded);
   else if(listFilter==='done') items=items.filter(i=>i.discarded);
-  else if(listFilter==='today'){
-    items=items.filter(i=>!i.discarded && discardDiff(i.expiry)===0);
-  }
-  else if(listFilter==='tomorrow'){
-    items=items.filter(i=>!i.discarded && discardDiff(i.expiry)===1);
-  }
   else if(listFilter==='repeat'){
     items=items.filter(i=>i.repeat && !i.discarded);
   }
@@ -746,6 +742,9 @@ function renderList(){
     if(idx[key]===undefined){ idx[key]=groups.length; groups.push({key, y:d.getFullYear(), m:d.getMonth(), items:[], sum:0}); }
     const g=groups[idx[key]]; g.items.push(i); g.sum+=qtyOf(i);
   });
+  // 既定状態：初めて出てきた月は「当月なら開く／それ以外は閉じる」を一度だけ適用（手動操作は維持）
+  const curKey=currentMonthKey();
+  groups.forEach(g=>{ if(!seenMonths.has(g.key)){ seenMonths.add(g.key); if(g.key!==curKey) collapsedMonths.add(g.key); } });
   area.innerHTML = groups.map(g=>{
     const collapsed = collapsedMonths.has(g.key);
     const label = `${g.y===thisYear?'':g.y+'年'}${g.m+1}月`;

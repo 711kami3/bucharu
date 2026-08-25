@@ -4,8 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0b7d3e">
-<title>鮮度管理</title>
+<title>ぶちゃる</title>
 <link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-title" content="ぶちゃる">
 <style>
   :root{
     --green:#0b7d3e; --green-d:#095f30;
@@ -29,6 +31,8 @@
   header .sub{font-size:12px; font-weight:400; opacity:.9;}
   header .right{margin-left:auto; display:flex; align-items:center; gap:10px;}
   header #storeBtn{background:rgba(255,255,255,.2); color:#fff; border:none; border-radius:20px; padding:5px 12px; font-size:13px; font-weight:600; cursor:pointer;}
+  header .apptitle{font-size:18px; font-weight:700;}
+  header .apptitle .fuji{font-size:16px;}
   main{padding:14px; max-width:640px; margin:0 auto;}
   .tab{display:none;}
   .tab.active{display:block;}
@@ -158,7 +162,7 @@
 </head>
 <body>
 <header>
-  <span>🗓️ 鮮度管理</span>
+  <span class="apptitle">ぶちゃる <span class="fuji">🗻</span></span>
   <button id="storeBtn" type="button">🏪 未設定</button>
   <span class="right">
     <span class="sub" id="syncDot">●</span>

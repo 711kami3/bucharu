@@ -502,7 +502,7 @@ async function connectStore(){
 
 // オーナー：この合言葉で店舗を新規作成（既存データがあればそのまま引き継ぐ）
 function showCreatePrompt(sid){
-  appConfirm('この合言葉「'+sid+'」の店舗をあなたのアカウントで作成しますか？\n（既にこの合言葉でデータがある場合はそのまま引き継がれます）', ()=> ownerCreateStore(sid));
+  appConfirm('この合言葉「'+sid+'」の店舗をあなたのアカウントで作成しますか？（既にこの合言葉でデータがある場合はそのまま引き継がれます）', ()=> ownerCreateStore(sid), '作成する', 'var(--green)');
 }
 async function ownerCreateStore(sid){
   const u=fbAuth.currentUser;
@@ -885,7 +885,13 @@ window.discard=id=>{
 };
 window.undiscard=id=>{ baseRef().collection('items').doc(id).update({discarded:false}); };
 let _confirmCb=null;
-function appConfirm(msg, cb){ $('#confirmMsg').textContent=msg; _confirmCb=cb; $('#confirmModal').classList.add('show'); }
+function appConfirm(msg, cb, okText, okColor){
+  $('#confirmMsg').textContent=msg;
+  const y=$('#confirmYes');
+  y.textContent = okText || '削除する';
+  y.style.background = okColor || 'var(--red)';
+  _confirmCb=cb; $('#confirmModal').classList.add('show');
+}
 $('#confirmYes').onclick=()=>{ $('#confirmModal').classList.remove('show'); const cb=_confirmCb; _confirmCb=null; if(cb) cb(); };
 $('#confirmNo').onclick=()=>{ $('#confirmModal').classList.remove('show'); _confirmCb=null; };
 $('#confirmModal').onclick=e=>{ if(e.target.id==='confirmModal'){ $('#confirmModal').classList.remove('show'); _confirmCb=null; } };

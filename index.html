@@ -77,6 +77,9 @@
   .btn:active{background:var(--green-d);}
   .btn.sec{background:#eef0f3; color:var(--text);}
   .btn.sm{padding:8px 12px; width:auto; font-size:14px;}
+  .btn.ghost{background:#eef0f3; color:var(--text);}
+  .linkbtn{background:none; border:none; color:var(--green); font-weight:700; font-size:13px; cursor:pointer; text-decoration:underline; padding:2px;}
+  .gatestate{background:#eef7f0; border-radius:8px; padding:8px 10px; font-size:13px; margin:0 0 12px;}
   .chips{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;}
   .chip{background:#eef0f3; border:none; border-radius:20px; padding:8px 14px; font-size:14px; cursor:pointer;}
   .chip:active{background:#dde1e6;}
@@ -277,11 +280,23 @@
 <!-- 店舗コード設定モーダル -->
 <div class="modal" id="storeGate">
   <div class="sheet">
-    <h2>店舗コードを設定</h2>
-    <p class="muted" style="margin:0 0 12px; line-height:1.6">同じ「店舗コード（合言葉）」を入れた端末どうしで、データが共有されます。店舗ごとに好きな英数字を決めてください。<br>例：<b>kofu-kamiishida</b></p>
+    <h2>店舗に接続</h2>
+    <p class="gatestate muted" id="gateAuth">スタッフとして接続（ログイン不要）</p>
+    <p class="muted" style="margin:0 0 12px; line-height:1.6">同じ「合言葉」を入れた端末どうしで、データが共有されます。店舗ごとに好きな英数字を決めてください。<br>例：<b>kofu-kamiishida</b></p>
     <input id="storeInput" placeholder="例）kofu-kamiishida" autocapitalize="off" autocorrect="off" spellcheck="false">
     <button class="btn" id="storeSave" style="margin-top:14px">接続する</button>
-    <p class="muted" style="margin-top:10px; font-size:12px">※ 全店舗で同じコードにすると全部が混ざります。店舗ごとに変えてください。</p>
+
+    <div id="ownerPanel" style="display:none; margin-top:14px; padding-top:12px; border-top:1px solid #e3e6ea">
+      <p class="muted" style="margin:0 0 8px; font-size:13px"><b>店舗管理（オーナー）</b></p>
+      <p class="muted" id="lockState" style="margin:0 0 8px; font-size:13px">🔓 解錠中</p>
+      <button class="btn ghost" id="lockToggle" type="button">施錠する</button>
+      <p class="muted" style="margin-top:8px; font-size:12px">施錠すると新しい端末は参加できません。スタッフ端末を全部登録し終えたら施錠すると安全です。</p>
+    </div>
+
+    <p class="muted" style="margin-top:14px; font-size:12px; text-align:center">
+      店舗を作る/管理するオーナーの方は<br>
+      <button type="button" id="gateGoogle" class="linkbtn">Googleでログイン</button>
+    </p>
   </div>
 </div>
 
@@ -376,7 +391,11 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fbAuth = firebase.auth();
 const fbDb = firebase.firestore();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
 fbDb.enablePersistence({synchronizeTabs:true}).catch(()=>{}); // オフラインキャッシュ
+// オーナー＝Googleログイン（実アカウント）／スタッフ＝匿名
+function isOwnerUser(){ return !!(fbAuth.currentUser && !fbAuth.currentUser.isAnonymous); }
+function ownerLabel(){ const u=fbAuth.currentUser; return (u && !u.isAnonymous) ? (u.email||u.displayName||'オーナー') : ''; }
 
 let ITEMS = [];   // 同期された商品一覧（メモリ上）
 let MASTER = {};  // 同期された商品マスター
@@ -430,7 +449,100 @@ function setSyncStatus(s){
   else { el.textContent='● オフライン'; el.style.color='#ffd9a8'; }
 }
 function updateStoreLabel(){ const b=$('#storeBtn'); if(b) b.textContent='🏪 '+(getStore()||'未設定'); }
-function openStoreGate(){ $('#storeInput').value=getStore(); $('#storeGate').classList.add('show'); setTimeout(()=>$('#storeInput').focus(),100); }
+function openStoreGate(){ $('#storeInput').value=getStore(); renderGateState(); $('#storeGate').classList.add('show'); setTimeout(()=>$('#storeInput').focus(),100); }
+
+// ゲート画面のログイン状態表示を更新
+function renderGateState(){
+  const info=$('#gateAuth'); if(!info) return;
+  if(isOwnerUser()){
+    info.innerHTML='オーナーとしてログイン中：<b>'+esc(ownerLabel())+'</b> <button type="button" id="gateSignout" class="linkbtn">ログアウト</button>';
+    const so=$('#gateSignout'); if(so) so.onclick=()=>{ fbAuth.signOut().then(()=>{ location.reload(); }); };
+    $('#gateGoogle').style.display='none';
+  } else {
+    info.textContent='スタッフとして接続（ログイン不要）';
+    $('#gateGoogle').style.display='';
+  }
+  refreshOwnerPanel();
+}
+
+// Googleログイン（オーナー用）。PWA内でポップアップが塞がれたらSafariでの実施を案内
+function ownerLogin(){
+  fbAuth.signInWithPopup(googleProvider).then(()=>{
+    showToast('ログインしました'); renderGateState();
+  }).catch(e=>{
+    console.warn('google login', e);
+    showToast('ログインできませんでした。Safariでこのアプリを開いてお試しください');
+  });
+}
+
+// 合言葉で接続：スタッフ＝参加登録、オーナー＝所有確認（無ければ作成を案内）
+async function connectStore(){
+  const sid=getStore(); const u=fbAuth.currentUser;
+  if(!sid){ return; }
+  if(!u){ showToast('接続の準備中です。少し待って再度お試しください'); return; }
+  setSyncStatus('offline');
+  if(!u.isAnonymous){
+    // オーナー：この合言葉の店舗を所有 or 参加しているか
+    let snap=null;
+    try{ snap=await fbDb.collection('stores').doc(sid).get(); }catch(e){ snap=null; }
+    if(snap && snap.exists){ startSync(); $('#storeGate').classList.remove('show'); refreshOwnerPanel(); }
+    else { showCreatePrompt(sid); } // 未作成 → 作成/引き継ぎを促す
+    return;
+  }
+  // スタッフ（匿名）：自分の端末を参加登録してから同期
+  try{
+    await fbDb.collection('stores').doc(sid).collection('members').doc(u.uid)
+      .set({joinedAt:new Date().toISOString()});
+    startSync(); $('#storeGate').classList.remove('show');
+  }catch(e){
+    console.warn('join', e);
+    showToast('接続できませんでした。合言葉が正しいか、オーナーが店舗を作成済みかご確認ください');
+  }
+}
+
+// オーナー：この合言葉で店舗を新規作成（既存データがあればそのまま引き継ぐ）
+function showCreatePrompt(sid){
+  appConfirm('この合言葉「'+sid+'」の店舗をあなたのアカウントで作成しますか？\n（既にこの合言葉でデータがある場合はそのまま引き継がれます）', ()=> ownerCreateStore(sid));
+}
+async function ownerCreateStore(sid){
+  const u=fbAuth.currentUser;
+  if(!u || u.isAnonymous){ showToast('先にGoogleでログインしてください'); return; }
+  try{
+    await fbDb.collection('stores').doc(sid).set({
+      ownerUid:u.uid, ownerEmail:(u.email||''), name:sid, locked:false,
+      createdAt:new Date().toISOString()
+    }, {merge:true});
+    showToast('店舗を作成しました'); startSync();
+    $('#storeGate').classList.remove('show'); refreshOwnerPanel();
+  }catch(e){
+    console.warn('create store', e);
+    showToast('作成できませんでした。この合言葉は別のオーナーが使用中の可能性があります');
+  }
+}
+
+// オーナー管理パネル（施錠/解錠・オーナー表示）
+let STORE_META=null, unsubStore=null;
+function refreshOwnerPanel(){
+  const p=$('#ownerPanel'); if(!p) return;
+  if(!isOwnerUser() || !getStore()){ p.style.display='none'; return; }
+  if(unsubStore){ unsubStore(); unsubStore=null; }
+  unsubStore=fbDb.collection('stores').doc(getStore()).onSnapshot(d=>{
+    STORE_META=d.exists?d.data():null;
+    const isMine=STORE_META && STORE_META.ownerUid===fbAuth.currentUser.uid;
+    if(!isMine){ p.style.display='none'; return; }
+    p.style.display='';
+    const locked=STORE_META.locked===true;
+    $('#lockState').textContent=locked?'🔒 施錠中（新しい端末は参加不可）':'🔓 解錠中（合言葉で参加できる）';
+    $('#lockToggle').textContent=locked?'解錠する':'施錠する';
+  }, ()=>{});
+}
+function toggleLock(){
+  if(!STORE_META) return;
+  const next=!(STORE_META.locked===true);
+  fbDb.collection('stores').doc(getStore()).update({locked:next})
+    .then(()=>showToast(next?'施錠しました':'解錠しました'))
+    .catch(()=>showToast('変更できませんでした'));
+}
 
 /* ============ 共通ユーティリティ ============ */
 const $ = s => document.querySelector(s);
@@ -960,16 +1072,22 @@ $('#icsExport').onclick=()=>{
     let code=$('#storeInput').value.trim().toLowerCase().replace(/[^a-z0-9_\-]/g,'');
     if(code.length<3){ showToast('3文字以上の英数字で入力してください（例：kofu-kamiishida）'); return; }
     setStore(code); updateStoreLabel();
-    $('#storeGate').classList.remove('show');
-    if(fbAuth.currentUser) startSync();
+    connectStore(); // 参加/作成してから同期
   };
   $('#storeInput').onkeydown=e=>{ if(e.key==='Enter') $('#storeSave').click(); };
+  $('#gateGoogle').onclick=ownerLogin;
+  $('#lockToggle').onclick=toggleLock;
   // 店舗コード未設定の初回はモーダルを閉じさせない
   $('#storeGate').onclick=e=>{ if(e.target.id==='storeGate' && getStore()) $('#storeGate').classList.remove('show'); };
-  // Firebase 匿名ログイン → 同期開始
-  fbAuth.signInAnonymously().catch(e=>{ console.warn('auth', e); setSyncStatus('offline'); });
+  // 認証：スタッフ端末は匿名で自動サインイン。オーナーはゲートからGoogleログイン
+  fbAuth.getRedirectResult().catch(()=>{}).finally(()=>{
+    if(!fbAuth.currentUser){ fbAuth.signInAnonymously().catch(e=>{ console.warn('auth', e); setSyncStatus('offline'); }); }
+  });
   fbAuth.onAuthStateChanged(user=>{
-    if(user){ if(getStore()) startSync(); else openStoreGate(); }
+    renderGateState();
+    if(user){
+      if(getStore()) connectStore(); else openStoreGate();
+    }
   });
   checkAlerts();
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }

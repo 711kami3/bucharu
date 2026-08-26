@@ -291,6 +291,16 @@
       <p class="muted" id="lockState" style="margin:0 0 8px; font-size:13px">🔓 解錠中</p>
       <button class="btn ghost" id="lockToggle" type="button">施錠する</button>
       <p class="muted" style="margin-top:8px; font-size:12px">施錠すると新しい端末は参加できません。スタッフ端末を全部登録し終えたら施錠すると安全です。</p>
+
+      <div style="margin-top:14px; padding-top:12px; border-top:1px solid #e3e6ea">
+        <p class="muted" style="margin:0 0 8px; font-size:13px"><b>バックアップ</b></p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn ghost" id="bkExport" type="button" style="flex:1; min-width:120px">書き出す</button>
+          <button class="btn ghost" id="bkImport" type="button" style="flex:1; min-width:120px">復元する</button>
+        </div>
+        <input type="file" id="bkFile" accept="application/json,.json" style="display:none">
+        <p class="muted" style="margin-top:8px; font-size:12px">「書き出す」で全データをファイル保存。万一のときは「復元する」でそのファイルから戻せます（既存データは残したまま上書き）。</p>
+      </div>
     </div>
 
     <p class="muted" style="margin-top:14px; font-size:12px; text-align:center">
@@ -542,6 +552,58 @@ function toggleLock(){
   fbDb.collection('stores').doc(getStore()).update({locked:next})
     .then(()=>showToast(next?'施錠しました':'解錠しました'))
     .catch(()=>showToast('変更できませんでした'));
+}
+
+// ===== バックアップ（書き出し／復元）=====
+// 現在の店舗の全データ（商品＋マスター）を1ファイルに書き出す
+function exportBackup(){
+  const sid=getStore();
+  if(!sid){ showToast('先に店舗に接続してください'); return; }
+  const now=new Date();
+  const data={ app:'buchiaru', version:1, store:sid, exportedAt:now.toISOString(),
+    items: ITEMS.map(x=>Object.assign({}, x)),
+    master: JSON.parse(JSON.stringify(MASTER)) };
+  const stamp=`${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`;
+  const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`buchiaru-backup-${sid}-${stamp}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  showToast('バックアップを書き出しました');
+}
+// 選ばれたファイルを読み、内容を確認してから復元
+function importBackupFile(file){
+  const sid=getStore();
+  if(!sid){ showToast('先に店舗に接続してください'); return; }
+  const r=new FileReader();
+  r.onload=()=>{
+    let data; try{ data=JSON.parse(r.result); }catch(e){ showToast('ファイルを読み込めませんでした'); return; }
+    if(!data || data.app!=='buchiaru' || !Array.isArray(data.items)){ showToast('ぶちゃるのバックアップファイルではありません'); return; }
+    const ic=data.items.length, mc=data.master?Object.keys(data.master).length:0;
+    appConfirm('このバックアップから復元します。商品'+ic+'件・マスター'+mc+'件を現在の店舗「'+sid+'」に書き込みます（既存データは残したまま同じものを上書き）。よろしいですか？',
+      ()=>applyBackup(data), '復元する', 'var(--green)');
+  };
+  r.readAsText(file);
+}
+// 実際の書き戻し。Firestoreのバッチ上限(500)を考慮して400件ずつ分割
+async function applyBackup(data){
+  const b=baseRef();
+  try{
+    let batch=fbDb.batch(), n=0;
+    const flush=async()=>{ if(n>0){ await batch.commit(); batch=fbDb.batch(); n=0; } };
+    for(const it of data.items){
+      const rest=Object.assign({}, it); const id=rest.id; delete rest.id;
+      if(!id) continue;
+      batch.set(b.collection('items').doc(id), rest, {merge:true}); n++;
+      if(n>=400) await flush();
+    }
+    if(data.master){ for(const jan of Object.keys(data.master)){
+      batch.set(b.collection('master').doc(jan), data.master[jan], {merge:true}); n++;
+      if(n>=400) await flush();
+    }}
+    await flush();
+    showToast('復元しました');
+  }catch(e){ console.warn('restore', e); showToast('復元中にエラーが発生しました'); }
 }
 
 /* ============ 共通ユーティリティ ============ */
@@ -799,10 +861,13 @@ $('#saveBtn').onclick = ()=>{
   // 日付管理。正午で保存し、日付のズレ（タイムゾーン）を防ぐ
   const expiry = new Date(`${date}T12:00:00`).toISOString();
   const img = currentImg || '';
+  // 画像はバーコードあり＝マスター(JANごと1枚)に集約し、記録には持たせない（重複保存を防ぐ）。
+  //           バーコードなし＝共有先が無いので記録に保持。
+  const itemImg = jan ? '' : img;
   const id = uid();
   const b = baseRef();
   // アイテム追加（共有DBへ。オフライン時は自動でキュー→復帰時に同期）
-  b.collection('items').doc(id).set({jan, name, expiry, qty, img, repeat, createdAt:new Date().toISOString(), discarded:false});
+  b.collection('items').doc(id).set({jan, name, expiry, qty, img:itemImg, repeat, createdAt:new Date().toISOString(), discarded:false});
   // マスター更新（次回から自動表示。merge で既存の画像/名前を消さない）
   if(jan) b.collection('master').doc(jan).set(img?{name, img}:{name}, {merge:true});
   // リセット
@@ -828,10 +893,13 @@ function currentMonthKey(){ const d=new Date(); return `${d.getFullYear()}-${d.g
 document.querySelectorAll('#listSeg button').forEach(b=>{
   b.onclick=()=>{ document.querySelectorAll('#listSeg button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); listFilter=b.dataset.f; renderList(); };
 });
+// サムネ取得：記録の画像→無ければ同JANのマスター画像（後方互換：古い記録の画像もそのまま表示）
+function thumbOf(i){ return i.img || (i.jan && MASTER[i.jan] && MASTER[i.jan].img) || ''; }
 function itemHTML(i){
   const st = i.discarded?'ok':statusOf(i.expiry);
+  const th = thumbOf(i);
   return `<div class="item ${i.discarded?'':st}">
-      ${i.img?`<img class="thumb" src="${i.img}" alt="">`:''}
+      ${th?`<img class="thumb" src="${th}" alt="">`:''}
       <div class="info" onclick="editItem('${i.id}')" title="タップで編集">
         <div class="name">${esc(i.name)}</div>
         <div class="meta">期限 ${fmtDate(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span>${i.repeat?'<span class="reptag">繰り返し</span>':''}</div>
@@ -922,7 +990,7 @@ window.editItem=id=>{
   const d=new Date(it.expiry);
   $('#eDate').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   $('#eQty').value = it.qty==null ? '' : it.qty;
-  editImg=it.img||''; ePreview();
+  editImg=thumbOf(it); ePreview(); // 記録 or マスターの現画像を表示
   document.querySelectorAll('#eChips .chip').forEach(c=>c.classList.remove('on'));
   $('#editModal').classList.add('show');
 };
@@ -952,7 +1020,9 @@ $('#eSave').onclick=()=>{
   const expiry=new Date(`${date}T12:00:00`).toISOString();
   const it=ITEMS.find(i=>i.id===editingId);
   const b=baseRef();
-  b.collection('items').doc(editingId).update({name, expiry, qty, img:editImg});
+  // バーコードあり＝画像はマスターへ集約し記録側は空に（重複解消）。なし＝記録に保持
+  const itemImg = (it && it.jan) ? '' : editImg;
+  b.collection('items').doc(editingId).update({name, expiry, qty, img:itemImg});
   if(it && it.jan) b.collection('master').doc(it.jan).set(editImg?{name, img:editImg}:{name}, {merge:true});
   $('#editModal').classList.remove('show'); editingId=null;
   showToast('更新しました');
@@ -1019,7 +1089,7 @@ window.showDay=d=>{
   $('#sheetTitle').textContent=`${calM+1}月${d}日 の廃棄予定（${items.reduce((a,i)=>a+qtyOf(i),0)}点）`;
   $('#sheetBody').innerHTML = items.length? items.map(i=>`
     <div class="item ${statusOf(i.expiry)}">
-      ${i.img?`<img class="thumb" src="${i.img}" alt="">`:''}
+      ${thumbOf(i)?`<img class="thumb" src="${thumbOf(i)}" alt="">`:''}
       <div class="info"><div class="name">${esc(i.name)}</div><div class="meta">期限 ${fmtDate(i.expiry)}${i.repeat?'<span class="reptag">繰り返し</span>':''}</div></div>
       <div class="qty">${i.qty!=null?`${i.qty}点`:'—'}</div>
     </div>`).join('') : '<div class="empty">予定はありません</div>';
@@ -1083,6 +1153,9 @@ $('#icsExport').onclick=()=>{
   $('#storeInput').onkeydown=e=>{ if(e.key==='Enter') $('#storeSave').click(); };
   $('#gateGoogle').onclick=ownerLogin;
   $('#lockToggle').onclick=toggleLock;
+  $('#bkExport').onclick=exportBackup;
+  $('#bkImport').onclick=()=>$('#bkFile').click();
+  $('#bkFile').onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) importBackupFile(f); e.target.value=''; };
   // 店舗コード未設定の初回はモーダルを閉じさせない
   $('#storeGate').onclick=e=>{ if(e.target.id==='storeGate' && getStore()) $('#storeGate').classList.remove('show'); };
   // 認証：スタッフ端末は匿名で自動サインイン。オーナーはゲートからGoogleログイン

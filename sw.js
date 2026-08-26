@@ -1,6 +1,6 @@
 // ネットワーク優先のサービスワーカー
 // オンライン時は常に最新を取得し、オフライン時のみキャッシュを使う
-const CACHE = 'fm-v6';
+const CACHE = 'fm-v8';
 const ASSETS = [
   './', './index.html', './manifest.json',
   './vendor/zxing.min.js',

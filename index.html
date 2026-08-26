@@ -254,6 +254,8 @@
     </div>
     <div class="cal" id="calGrid"></div>
     <div id="dayDetail" style="margin-top:14px"></div>
+    <button class="btn sec" id="icsExport" style="margin-top:8px">📅 廃棄予定をカレンダーに書き出し</button>
+    <p class="muted" style="margin-top:8px; font-size:12px; text-align:center">書き出したファイルをタップ→Google/Appleカレンダーに取り込めます</p>
   </section>
 </main>
 
@@ -907,6 +909,45 @@ window.showDay=d=>{
 };
 $('#sheetClose').onclick=()=>$('#modal').classList.remove('show');
 $('#modal').onclick=e=>{ if(e.target.id==='modal') $('#modal').classList.remove('show'); };
+
+/* ============ 廃棄予定を .ics カレンダーに書き出し ============ */
+function icsEsc(s){ return String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
+function buildICS(){
+  const items=DB.items().filter(i=>!i.discarded);
+  const byDay={};
+  items.forEach(i=>{ const d=discardDateObj(i.expiry); const key=`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`; (byDay[key]=byDay[key]||[]).push(i); });
+  const dtstamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//buchiaru//haiki//JP','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  Object.keys(byDay).sort().forEach(key=>{
+    const list=byDay[key];
+    const total=list.reduce((a,i)=>a+qtyOf(i),0);
+    const y=+key.slice(0,4), m=+key.slice(4,6), da=+key.slice(6,8);
+    const end=new Date(y,m-1,da+1); const endkey=`${end.getFullYear()}${pad(end.getMonth()+1)}${pad(end.getDate())}`;
+    const desc=list.map(i=>`・${i.name}${i.qty!=null?` ${i.qty}点`:''}`).join('\n');
+    L.push('BEGIN:VEVENT');
+    L.push('UID:buchiaru-'+getStore()+'-'+key+'@buchiaru'); // 同じ日は同じID＝取り込み直しで上書き（重複しない）
+    L.push('DTSTAMP:'+dtstamp);
+    L.push('SEQUENCE:'+Math.floor(Date.now()/60000)); // 書き出すたび増加＝更新版として反映される
+    L.push('DTSTART;VALUE=DATE:'+key);
+    L.push('DTEND;VALUE=DATE:'+endkey);
+    L.push('SUMMARY:'+icsEsc('🗑️廃棄 '+list.length+'件（計'+total+'点）'));
+    L.push('DESCRIPTION:'+icsEsc(desc));
+    L.push('END:VEVENT');
+  });
+  L.push('END:VCALENDAR');
+  return L.join('\r\n');
+}
+$('#icsExport').onclick=()=>{
+  const items=DB.items().filter(i=>!i.discarded);
+  if(items.length===0){ showToast('書き出す廃棄予定がありません'); return; }
+  const ics=buildICS();
+  const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='buchiaru-haiki.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  showToast('カレンダーに書き出しました');
+};
 
 /* ============ 起動時 ============ */
 (function init(){

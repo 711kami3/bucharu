@@ -170,10 +170,66 @@
   nav button.fab .ic svg{width:28px; height:28px;}
   nav button.fab:active .ic{transform:scale(.94);}
 
+  /* ===== ぶちゃるモード ===== */
+  .viewseg{margin-bottom:10px;}
+  .bmode{position:fixed; inset:0; z-index:60; background:var(--bg); display:none; flex-direction:column;
+    padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); overscroll-behavior:none;}
+  .bmode.show{display:flex;}
+  .bmhead{display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--green); color:#fff;}
+  .bmtitle{font-weight:700; font-size:17px;}
+  .bmtitle small{font-weight:400; font-size:12px; opacity:.9;}
+  .bmcount{margin-left:auto; font-size:12px; opacity:.9;}
+  .bmexit{background:rgba(255,255,255,.22); color:#fff; border:none; border-radius:16px; padding:6px 14px; font-size:13px; font-weight:700; cursor:pointer;}
+  .bmzone{flex:0 0 auto; height:62px; display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:15px; letter-spacing:.04em; transition:background .15s, color .15s;}
+  .bmzone.top{background:#fde9e7; color:#b3372f;}
+  .bmzone.bottom{background:#e9f2fb; color:#2f6ea8;}
+  .bmzone.top.hot{background:var(--red); color:#fff;}
+  .bmzone.bottom.hot{background:#2f6ea8; color:#fff;}
+  .bmstage{flex:1 1 auto; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:14px;}
+  .bcard{width:min(100%,340px); background:var(--card); border:1px solid var(--line); border-radius:18px;
+    box-shadow:0 10px 30px rgba(20,30,40,.13); padding:18px; text-align:center; touch-action:none; user-select:none; cursor:grab;}
+  .bcard .bimg{width:100%; height:190px; object-fit:contain; border-radius:12px; background:#eef0f3; display:block;}
+  .bcard .bnoimg{width:100%; height:190px; border-radius:12px; background:#eef0f3; display:flex; align-items:center; justify-content:center; color:var(--gray); font-size:13px;}
+  .bcard .bname{font-size:19px; font-weight:700; margin-top:12px; line-height:1.4; word-break:break-word;}
+  .bcard .bmeta{margin-top:6px; font-size:13px; color:var(--gray);}
+  .bcard .bqty{margin-top:8px; font-size:15px; font-weight:700;}
+  .bcard .bday{display:inline-block; margin-top:8px; font-size:12px; font-weight:700; border-radius:12px; padding:3px 10px;}
+  .bcard .bday.today{background:#fdece9; color:#b3372f;}
+  .bcard .bday.tomo{background:#fff3e0; color:#a35c00;}
+  .bcard .bday.rep{background:#e7f4ec; color:var(--green); margin-left:6px;}
+  .bhint{position:absolute; left:0; right:0; bottom:6px; text-align:center; font-size:11.5px; color:var(--gray);}
+  /* スワイプ確定アニメ */
+  .bcard.gone-up{transition:transform .32s cubic-bezier(.4,0,.6,1), opacity .32s; transform:translateY(-120vh) scale(.5) rotate(-8deg); opacity:0;}
+  .bcard.gone-down{transition:transform .3s ease-in, opacity .3s; transform:translateY(90vh) scale(.9); opacity:0;}
+  .bcard.spring{transition:transform .22s cubic-bezier(.2,.8,.3,1);}
+  /* プロンプト・ふじばあ */
+  .bmask{position:absolute; inset:0; background:rgba(20,30,25,.45); display:none; align-items:center; justify-content:center; padding:20px; z-index:5;}
+  .bmask.show{display:flex;}
+  .bmpanel{background:var(--card); border-radius:18px; padding:20px 18px; width:min(100%,340px); text-align:center; box-shadow:0 14px 40px rgba(0,0,0,.25);}
+  .bmq{margin:0 0 16px; font-size:19px; font-weight:700;}
+  .bmbtns{display:flex; flex-direction:column; gap:9px;}
+  .bmbtns button{border:none; border-radius:11px; padding:13px; font-size:15px; font-weight:700; cursor:pointer;}
+  .bmbtns .primary{background:var(--green); color:#fff;}
+  .bmbtns .second{background:#eef0f3; color:var(--text);}
+  .bmbtns .quiet{background:none; color:var(--gray); font-size:14px; padding:8px;}
+  .bmask.fuji{background:rgba(255,255,255,.94);}
+  .fujibox{text-align:center; animation:fujiin .32s ease-out;}
+  @keyframes fujiin{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;}}
+  .fujisay{margin:0 auto 10px; display:inline-block; background:#fffbe9; border:2px solid #e6dcbb; border-radius:16px;
+    padding:12px 18px; font-size:19px; font-weight:700; color:#4a3d18; max-width:300px; line-height:1.5;}
+  .fujibox img{display:block; margin:0 auto; width:190px; height:auto;}
+  /* 元に戻す */
+  .bmundo{position:absolute; left:14px; right:14px; bottom:78px; z-index:6; display:none;
+    background:rgba(30,36,48,.94); color:#fff; border-radius:12px; padding:11px 14px; align-items:center; gap:12px; font-size:14px;}
+  .bmundo.show{display:flex;}
+  .bmundo button{margin-left:auto; background:none; border:none; color:#8fe0ac; font-weight:700; font-size:14px; cursor:pointer; padding:4px 6px;}
+
   .empty{text-align:center; color:var(--gray); padding:40px 20px; font-size:14px;}
 
   /* モーダル */
   .modal{position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:flex-end; z-index:40;}
+  #nextModal{z-index:70;} /* ぶちゃるモード（z:60）より前面に出す */
   .modal.show{display:flex;}
   .sheet{background:#fff; width:100%; max-width:640px; margin:0 auto; border-radius:18px 18px 0 0; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); max-height:80vh; overflow:auto;}
   .sheet h2{margin:0 0 10px; font-size:17px;}
@@ -257,33 +313,72 @@
 
   <!-- 一覧 -->
   <section class="tab" id="tab-list">
-    <div class="seg" id="listSeg">
-      <button class="on" data-f="active">未廃棄</button>
-      <button data-f="repeat">繰り返し</button>
-      <button data-f="done">廃棄済み</button>
+    <!-- 表示切替：リスト / カレンダー -->
+    <div class="seg viewseg" id="viewSeg">
+      <button class="on" data-v="list">リスト</button>
+      <button data-v="cal">カレンダー</button>
     </div>
-    <div id="listArea"></div>
-  </section>
 
-  <!-- カレンダー -->
-  <section class="tab" id="tab-cal">
-    <div class="calhead">
-      <button class="btn sec sm" id="prevM">‹</button>
-      <b id="calTitle"></b>
-      <button class="btn sec sm" id="nextM">›</button>
+    <div id="viewList">
+      <div class="seg" id="listSeg">
+        <button class="on" data-f="active">未廃棄</button>
+        <button data-f="repeat">繰り返し</button>
+        <button data-f="done">廃棄済み</button>
+      </div>
+      <div id="listArea"></div>
     </div>
-    <div class="cal" id="calGrid"></div>
-    <div id="dayDetail" style="margin-top:14px"></div>
-    <button class="btn sec" id="icsExport" style="margin-top:8px">📅 廃棄予定をカレンダーに書き出し</button>
-    <p class="muted" style="margin-top:8px; font-size:12px; text-align:center">書き出したファイルをタップ→Google/Appleカレンダーに取り込めます</p>
+
+    <div id="viewCal" style="display:none">
+      <div class="calhead">
+        <button class="btn sec sm" id="prevM">‹</button>
+        <b id="calTitle"></b>
+        <button class="btn sec sm" id="nextM">›</button>
+      </div>
+      <div class="cal" id="calGrid"></div>
+      <div id="dayDetail" style="margin-top:14px"></div>
+      <button class="btn sec" id="icsExport" style="margin-top:8px">廃棄予定をカレンダーに書き出し</button>
+      <p class="muted" style="margin-top:8px; font-size:12px; text-align:center">書き出したファイルをタップ→Google/Appleカレンダーに取り込めます</p>
+    </div>
   </section>
 </main>
 
 <nav>
-  <button data-tab="cal"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6"/><line x1="16" y1="2.5" x2="16" y2="6"/></svg></span>カレンダー</button>
-  <button class="on fab" data-tab="scan"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M3 12h18"/></svg></span>スキャン</button>
   <button data-tab="list"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3.5" y1="6" x2="3.51" y2="6"/><line x1="3.5" y1="12" x2="3.51" y2="12"/><line x1="3.5" y1="18" x2="3.51" y2="18"/></svg></span>一覧</button>
+  <button class="fab" data-tab="buchiaru"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span>ぶちゃる</button>
+  <button class="on" data-tab="scan"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M3 12h18"/></svg></span>スキャン</button>
 </nav>
+
+<!-- ぶちゃるモード（上=ぶちゃる／下=とっとく のスワイプ） -->
+<div class="bmode" id="bmode">
+  <div class="bmhead">
+    <span class="bmtitle">ぶちゃる<small>（廃棄）</small></span>
+    <span class="bmcount" id="bmCount"></span>
+    <button type="button" class="bmexit" id="bmExit">おわる</button>
+  </div>
+
+  <div class="bmzone top" id="bmZoneTop"><span>ぶちゃる</span></div>
+  <div class="bmstage" id="bmStage"></div>
+  <div class="bmzone bottom" id="bmZoneBottom"><span>とっとく</span></div>
+
+  <!-- 選択プロンプト -->
+  <div class="bmask" id="bmPrompt">
+    <div class="bmpanel">
+      <p class="bmq" id="bmPromptQ"></p>
+      <div class="bmbtns" id="bmPromptBtns"></div>
+    </div>
+  </div>
+
+  <!-- ふじばあ（終了時） -->
+  <div class="bmask fuji" id="bmFinish">
+    <div class="fujibox">
+      <p class="fujisay" id="fujiSay"></p>
+      <img id="fujiImg" alt="ふじばあ">
+    </div>
+  </div>
+
+  <!-- 元に戻す -->
+  <div class="bmundo" id="bmUndo"><span>ぶちゃりました</span><button type="button" id="bmUndoBtn">元に戻す</button></div>
+</div>
 
 <!-- 日別詳細モーダル -->
 <div class="modal" id="modal">
@@ -322,6 +417,14 @@
         <p class="gate-help">月1回ほど「書き出す」でファイル保存を。万一のとき「復元する」で戻せます。</p>
       </div>
     </div>
+
+    <!-- BETA-SURVEY start（一般公開時にこのブロックごと削除） -->
+    <div class="gate-sec">
+      <p class="gate-label">ベータ版</p>
+      <a class="btn ghost" href="https://docs.google.com/forms/d/e/1FAIpQLSdWYOMc2gHaekKdYiUEPrgdEmpwZvAeRDUEbWxezvjltRNW1Q/viewform" target="_blank" rel="noopener" style="display:block; text-decoration:none; text-align:center">アンケートに回答する（約1分）</a>
+      <p class="gate-help">使ってみた感想をお聞かせください。改善の参考にします。</p>
+    </div>
+    <!-- BETA-SURVEY end -->
 
     <p class="gate-sec" style="text-align:center; margin-top:22px">
       <a href="terms.html" target="_blank" rel="noopener" style="color:var(--gray); font-size:11px">利用規約・プライバシーポリシー</a>
@@ -378,6 +481,7 @@
 <div class="modal" id="nextModal">
   <div class="sheet">
     <h2>次の廃棄日</h2>
+    <p class="muted" style="margin:0 0 4px" id="nName"></p>
     <p class="muted" style="margin:0 0 12px">この繰り返し商品の、次の直近の廃棄日を入力してください。</p>
     <div class="chips" id="nChips">
       <button class="chip" data-d="1">明日</button>
@@ -439,7 +543,7 @@ function baseRef(){ return fbDb.collection('stores').doc(getStore()); }
 // 既存の呼び出しと互換：同期済みメモリを返す
 const DB = { items(){ return ITEMS; }, master(){ return MASTER; } };
 const uid = ()=> Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const SOON_DAYS = 3; // 「まもなく」判定：期限まで3日以内
+const SOON_DAYS = 1; // 「まもなく」判定：明日まで（今日・明日）
 
 // 一覧の操作アイコン（シンプルなラインアイコン）
 const IC = {
@@ -470,8 +574,7 @@ function stopSync(){
 function refreshUI(){
   const on=document.querySelector('nav button.on');
   const tab=on?on.dataset.tab:'scan';
-  if(tab==='list') renderList();
-  if(tab==='cal') renderCal();
+  if(tab==='list') renderListTab();
   checkAlerts();
 }
 function setSyncStatus(s){
@@ -651,7 +754,7 @@ function discardDiff(iso){ const t=new Date(); t.setHours(0,0,0,0); return Math.
 function statusOf(iso){
   const d = discardDiff(iso);
   if(d < 0) return 'over';            // 廃棄日を過ぎた
-  if(d <= SOON_DAYS) return 'soon';   // 今日〜数日以内が廃棄日
+  if(d <= SOON_DAYS) return 'soon';   // 今日・明日が廃棄日
   return 'ok';
 }
 function statusLabel(iso){
@@ -667,14 +770,32 @@ function qtyOf(i){ return i.qty==null ? 1 : i.qty; }
 /* ============ タブ切替 ============ */
 document.querySelectorAll('nav button').forEach(b=>{
   b.onclick = ()=>{
+    // 「ぶちゃる」はタブではなく専用モードを開く
+    if(b.dataset.tab==='buchiaru'){ openBuchiaru(); return; }
     document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
     b.classList.add('on');
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     $('#tab-'+b.dataset.tab).classList.add('active');
-    if(b.dataset.tab==='list') renderList();
-    if(b.dataset.tab==='cal') renderCal();
+    if(b.dataset.tab==='list') renderListTab();
   };
 });
+// 指定タブへ移動（ぶちゃるモード終了後などに使用）
+function goTab(name){
+  const b=document.querySelector('nav button[data-tab="'+name+'"]');
+  if(b) b.click();
+}
+// 一覧タブの表示切替（リスト / カレンダー）
+let listView='list';
+document.querySelectorAll('#viewSeg button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#viewSeg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); listView=b.dataset.v;
+    $('#viewList').style.display = listView==='list' ? '' : 'none';
+    $('#viewCal').style.display  = listView==='cal'  ? '' : 'none';
+    renderListTab();
+  };
+});
+function renderListTab(){ if(listView==='cal') renderCal(); else renderList(); }
 
 /* ============ 時計 & アラート ============ */
 function tickClock(){ const d=new Date(); $('#clock').textContent=`${pad(d.getHours())}:${pad(d.getMinutes())}`; }
@@ -1065,13 +1186,22 @@ $('#eSave').onclick=()=>{
 };
 
 /* ============ 繰り返し商品：次の廃棄日を入力 ============ */
-let nextId=null;
+let nextId=null, nextDone=null; // nextDone: 入力を終えたら呼ぶ（ぶちゃるモードの連続入力用）
 function addDays(n){ const d=new Date(); d.setDate(d.getDate()+n); return d; }
-function openNextDate(id){
-  nextId=id;
+function openNextDate(id, opts){
+  nextId=id; nextDone=(opts && opts.onDone) || null;
+  const it=DB.items().find(i=>i.id===id);
+  $('#nName').textContent = it ? it.name : '';
   $('#nDate').value=toLocalInput(addDays(1)).date;
   document.querySelectorAll('#nChips .chip').forEach(c=>c.classList.remove('on'));
   $('#nextModal').classList.add('show');
+}
+// モーダルを閉じ、待っている処理があれば続きへ
+function closeNextDate(){
+  $('#nextModal').classList.remove('show');
+  nextId=null;
+  const cb=nextDone; nextDone=null;
+  if(cb) cb();
 }
 document.querySelectorAll('#nChips .chip').forEach(c=>{
   c.onclick=()=>{
@@ -1081,15 +1211,15 @@ document.querySelectorAll('#nChips .chip').forEach(c=>{
     $('#nDate').value=toLocalInput(addDays(+p)).date; c.classList.add('on');
   };
 });
-$('#nCancel').onclick=()=>{ $('#nextModal').classList.remove('show'); nextId=null; };
-$('#nextModal').onclick=e=>{ if(e.target.id==='nextModal'){ $('#nextModal').classList.remove('show'); nextId=null; } };
+$('#nCancel').onclick=()=>{ closeNextDate(); };
+$('#nextModal').onclick=e=>{ if(e.target.id==='nextModal'){ closeNextDate(); } };
 $('#nSave').onclick=()=>{
   if(!nextId) return;
   const date=$('#nDate').value; if(!date){ showToast('日付を選んでください'); return; }
   const expiry=new Date(`${date}T12:00:00`).toISOString();
   baseRef().collection('items').doc(nextId).update({expiry});
-  $('#nextModal').classList.remove('show'); nextId=null;
   showToast('次の廃棄日を更新しました');
+  closeNextDate();
 };
 
 /* ============ カレンダー ============ */
@@ -1172,6 +1302,195 @@ $('#icsExport').onclick=()=>{
   setTimeout(()=>URL.revokeObjectURL(url),2000);
   showToast('カレンダーに書き出しました');
 };
+
+/* ============ ぶちゃるモード（今日・明日の廃棄をスワイプで処理） ============ */
+// ふじばあ：表情と一言（終了時にランダム表示。直前と同じものは出さない）
+const FUJI = [
+  {f:'normal',  t:'こぴっと完了！'},
+  {f:'normal',  t:'今日もこぴっとできたじゃん！'},
+  {f:'normal',  t:'お疲れさん、ようやったじゃん！'},
+  {f:'normal',  t:'これで安心だっちゅうこん！'},
+  {f:'normal',  t:'こぴっと確認できたじゃん！'},
+  {f:'normal',  t:'今日の分は終わったずら！'},
+  {f:'normal',  t:'ちゃんと確認できてえらいじゃん！'},
+  {f:'normal',  t:'見逃しなしずら！'},
+  {f:'normal',  t:'今日もご苦労さん！'},
+  {f:'surprise',t:'てっ！'},
+  {f:'surprise',t:'これぶちゃるっつこん！'},
+  {f:'scold',   t:'ぼけっとしちょし！'},
+  {f:'scold',   t:'だっちもねぇこんしちょし'},
+  {f:'sleepy',  t:'ふぁ〜……'},
+  {f:'sleepy',  t:'えらいときは休んでもいいさよぉ'}
+];
+let lastFuji = -1;
+function showFuji(face, text){
+  $('#fujiImg').src = 'fuji-'+face+'.png';
+  $('#fujiSay').textContent = text;
+  $('#bmFinish').classList.add('show');
+}
+function showFujiRandom(){
+  let i;
+  do { i = Math.floor(Math.random()*FUJI.length); } while(FUJI.length>1 && i===lastFuji);
+  lastFuji = i;
+  showFuji(FUJI[i].f, FUJI[i].t);
+}
+
+let bmQueue=[], bmKept=[], bmRepeatDone=[], bmTomorrowOK=false, bmCard=null, bmUndoTimer=null;
+
+// 対象：今日(0)・明日(1)廃棄の未廃棄アイテム（繰り返し商品も含む）
+function bmTargets(){
+  return DB.items()
+    .filter(i=>!i.discarded)
+    .filter(i=>{ const d=discardDiff(i.expiry); return d===0 || d===1; })
+    .sort((a,b)=> discardDiff(a.expiry)-discardDiff(b.expiry) || (a.name||'').localeCompare(b.name||'','ja'));
+}
+function openBuchiaru(){
+  if(!getStore()){ openStoreGate(); return; }
+  bmQueue = bmTargets(); bmKept=[]; bmRepeatDone=[]; bmTomorrowOK=false;
+  $('#bmPrompt').classList.remove('show');
+  $('#bmFinish').classList.remove('show');
+  $('#bmUndo').classList.remove('show');
+  $('#bmode').classList.add('show');
+  if(bmQueue.length===0){ showFuji('normal','今日は何もにゃあずらね'); setTimeout(closeBuchiaru, 2600); return; }
+  bmNext();
+}
+function closeBuchiaru(){
+  $('#bmode').classList.remove('show');
+  $('#bmStage').innerHTML=''; bmCard=null;
+  clearTimeout(bmUndoTimer); $('#bmUndo').classList.remove('show');
+  goTab('scan');
+}
+// 終了（ぶちゃらなかったものはそのまま残る）→ 繰り返し品の次回日付 → ふじばあ → スキャン画面へ
+function bmFinish(){
+  $('#bmPrompt').classList.remove('show');
+  $('#bmStage').innerHTML=''; bmCard=null;
+  clearTimeout(bmUndoTimer); $('#bmUndo').classList.remove('show');
+  // ぶちゃった繰り返し商品は、最後にまとめて次の廃棄日を入力してもらう
+  if(bmRepeatDone.length>0){
+    const list=bmRepeatDone.slice(); bmRepeatDone=[];
+    const step=()=>{ if(list.length===0){ bmShowFuji(); return; } openNextDate(list.shift().id, {onDone:step}); };
+    step();
+    return;
+  }
+  bmShowFuji();
+}
+function bmShowFuji(){
+  showFujiRandom();
+  const close=()=>{ $('#bmFinish').removeEventListener('click', close); clearTimeout(t); closeBuchiaru(); };
+  const t=setTimeout(close, 2800);
+  $('#bmFinish').addEventListener('click', close);
+}
+function bmPrompt(q, btns){
+  $('#bmPromptQ').textContent=q;
+  const box=$('#bmPromptBtns'); box.innerHTML='';
+  btns.forEach(b=>{
+    const el=document.createElement('button');
+    el.className=b.cls; el.type='button'; el.textContent=b.label;
+    el.onclick=()=>{ $('#bmPrompt').classList.remove('show'); b.act(); };
+    box.appendChild(el);
+  });
+  $('#bmPrompt').classList.add('show');
+}
+// 次のカードへ。日付の切り替わり・終了時は確認を出す
+function bmNext(){
+  $('#bmStage').innerHTML=''; bmCard=null;
+  // すでに他端末で廃棄済み/削除されたものは飛ばす
+  bmQueue = bmQueue.filter(q=>{ const cur=DB.items().find(i=>i.id===q.id); return cur && !cur.discarded; });
+  $('#bmCount').textContent = 'のこり '+(bmQueue.length+bmKept.length)+'件';
+
+  if(bmQueue.length===0){
+    if(bmKept.length>0){
+      bmPrompt('おわるけ？', [
+        {label:'とっとくカードへもう一回みるじゃん', cls:'second', act:()=>{ bmQueue=bmKept; bmKept=[]; bmNext(); }},
+        {label:'おわるじゃん', cls:'quiet', act:bmFinish}
+      ]);
+    } else bmFinish();
+    return;
+  }
+  const it = bmQueue[0];
+  if(discardDiff(it.expiry)===1 && !bmTomorrowOK){
+    const btns=[{label:'みるじゃん', cls:'primary', act:()=>{ bmTomorrowOK=true; bmNext(); }}];
+    if(bmKept.length>0) btns.push({label:'とっとくカードへもう一回みるじゃん', cls:'second',
+      act:()=>{ bmQueue=bmKept.concat(bmQueue); bmKept=[]; bmNext(); }});
+    btns.push({label:'おわるじゃん', cls:'quiet', act:bmFinish});
+    bmPrompt('明日のもみるけ？', btns);
+    return;
+  }
+  bmRender(it);
+}
+function bmRender(it){
+  const d = discardDiff(it.expiry);
+  const th = thumbOf(it);
+  const el=document.createElement('div');
+  el.className='bcard';
+  el.innerHTML =
+    (th? `<img class="bimg" src="${th}" alt="">` : `<div class="bnoimg">画像なし</div>`) +
+    `<div class="bname">${esc(it.name)}</div>` +
+    `<div class="bday ${d===0?'today':'tomo'}">${d===0?'今日廃棄':'明日廃棄'}</div>` +
+    (it.repeat? `<div class="bday rep">繰り返し</div>` : '') +
+    `<div class="bqty">${it.qty!=null? it.qty+'点' : '—'}</div>`;
+  const stage=$('#bmStage');
+  stage.innerHTML='';
+  stage.appendChild(el);
+  const hint=document.createElement('div');
+  hint.className='bhint'; hint.textContent='上へスワイプ＝ぶちゃる／下へ＝とっとく';
+  stage.appendChild(hint);
+  bmCard=el;
+  bmBindSwipe(el, it);
+}
+// スワイプ操作（上＝ぶちゃる／下＝とっとく）
+function bmBindSwipe(el, it){
+  let sy=0, dy=0, active=false;
+  const TH=90; // 確定に必要な距離
+  const zoneT=$('#bmZoneTop'), zoneB=$('#bmZoneBottom');
+  const reset=()=>{ zoneT.classList.remove('hot'); zoneB.classList.remove('hot'); };
+  el.addEventListener('pointerdown', e=>{
+    active=true; sy=e.clientY; dy=0; el.setPointerCapture(e.pointerId); el.classList.remove('spring');
+  });
+  el.addEventListener('pointermove', e=>{
+    if(!active) return;
+    dy = e.clientY - sy;
+    el.style.transform = `translateY(${dy}px) rotate(${dy*0.012}deg)`;
+    zoneT.classList.toggle('hot', dy < -TH);
+    zoneB.classList.toggle('hot', dy >  TH);
+  });
+  const end=()=>{
+    if(!active) return; active=false; reset();
+    if(dy < -TH){ el.classList.add('gone-up'); setTimeout(()=>bmDiscard(it), 240); }
+    else if(dy > TH){ el.classList.add('gone-down'); setTimeout(()=>bmKeep(it), 200); }
+    else { el.classList.add('spring'); el.style.transform=''; }
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+  // ゾーンのタップでも操作できる（スワイプが難しい端末向け）
+  zoneT.onclick=()=>{ if(bmCard===el){ el.classList.add('gone-up'); setTimeout(()=>bmDiscard(it),240); } };
+  zoneB.onclick=()=>{ if(bmCard===el){ el.classList.add('gone-down'); setTimeout(()=>bmKeep(it),200); } };
+}
+function bmDiscard(it){
+  bmQueue = bmQueue.filter(q=>q.id!==it.id);
+  if(it.repeat){
+    // 繰り返し商品はアーカイブせず、最後に次の廃棄日を入力してもらう
+    if(!bmRepeatDone.some(r=>r.id===it.id)) bmRepeatDone.push(it);
+  } else {
+    baseRef().collection('items').doc(it.id).update({discarded:true, discardedAt:new Date().toISOString()});
+  }
+  // 元に戻す（数秒だけ表示）
+  clearTimeout(bmUndoTimer);
+  $('#bmUndo').classList.add('show');
+  $('#bmUndoBtn').onclick=()=>{
+    if(it.repeat) bmRepeatDone = bmRepeatDone.filter(r=>r.id!==it.id);
+    else baseRef().collection('items').doc(it.id).update({discarded:false});
+    bmQueue.unshift(it); $('#bmUndo').classList.remove('show'); clearTimeout(bmUndoTimer); bmNext();
+  };
+  bmUndoTimer=setTimeout(()=>$('#bmUndo').classList.remove('show'), 4000);
+  bmNext();
+}
+function bmKeep(it){
+  bmQueue = bmQueue.filter(q=>q.id!==it.id);
+  if(!bmKept.some(k=>k.id===it.id)) bmKept.push(it);
+  bmNext();
+}
+$('#bmExit').onclick = bmFinish;
 
 /* ============ 起動時 ============ */
 (function init(){

@@ -1,9 +1,10 @@
 // ネットワーク優先のサービスワーカー
 // オンライン時は常に最新を取得し、オフライン時のみキャッシュを使う
-const CACHE = 'fm-v23';
+const CACHE = 'fm-v24';
 const ASSETS = [
   './', './index.html', './terms.html', './manifest.json',
   './fuji-normal.png', './fuji-surprise.png', './fuji-scold.png', './fuji-sleepy.png',
+  './bucharu-icon.png',
   './vendor/zxing.min.js',
   './vendor/firebase-app-compat.js',
   './vendor/firebase-auth-compat.js',

@@ -166,8 +166,8 @@
   nav button .ic svg{width:25px; height:25px; display:block;}
   /* 中央のスキャンを丸ボタンで主張 */
   nav button.fab{color:var(--green); font-weight:700;}
-  nav button.fab .ic{width:58px; height:58px; margin-top:-26px; border-radius:50%; background:var(--green); color:#fff; align-items:center; justify-content:center; border:4px solid #fff; box-shadow:0 5px 14px rgba(11,125,62,.45); transition:transform .12s ease;}
-  nav button.fab .ic svg{width:28px; height:28px;}
+  nav button.fab .ic{width:58px; height:58px; margin-top:-26px; border-radius:50%; background:#fff; align-items:center; justify-content:center; border:3px solid var(--green); box-shadow:0 5px 14px rgba(11,125,62,.32); transition:transform .12s ease;}
+  nav button.fab .ic img{width:40px; height:40px; display:block;}
   nav button.fab:active .ic{transform:scale(.94);}
 
   /* ===== ぶちゃるモード ===== */
@@ -197,6 +197,7 @@
   .bcard .bday{display:inline-block; margin-top:8px; font-size:12px; font-weight:700; border-radius:12px; padding:3px 10px;}
   .bcard .bday.today{background:#fdece9; color:#b3372f;}
   .bcard .bday.tomo{background:#fff3e0; color:#a35c00;}
+  .bcard .bday.over{background:var(--red); color:#fff;}
   .bcard .bday.rep{background:#e7f4ec; color:var(--green); margin-left:6px;}
   .bhint{position:absolute; left:0; right:0; bottom:6px; text-align:center; font-size:11.5px; color:var(--gray);}
   /* スワイプ確定アニメ */
@@ -344,7 +345,7 @@
 
 <nav>
   <button data-tab="list"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3.5" y1="6" x2="3.51" y2="6"/><line x1="3.5" y1="12" x2="3.51" y2="12"/><line x1="3.5" y1="18" x2="3.51" y2="18"/></svg></span>一覧</button>
-  <button class="fab" data-tab="buchiaru"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span>ぶちゃる</button>
+  <button class="fab" data-tab="buchiaru"><span class="ic"><img src="bucharu-icon.png" alt=""></span>ぶちゃる</button>
   <button class="on" data-tab="scan"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M3 12h18"/></svg></span>スキャン</button>
 </nav>
 
@@ -1337,11 +1338,11 @@ function showFujiRandom(){
 
 let bmQueue=[], bmKept=[], bmRepeatDone=[], bmTomorrowOK=false, bmCard=null, bmUndoTimer=null;
 
-// 対象：今日(0)・明日(1)廃棄の未廃棄アイテム（繰り返し商品も含む）
+// 対象：超過(<0)・今日(0)・明日(1)廃棄の未廃棄アイテム（繰り返し商品も含む）。超過→今日→明日の順
 function bmTargets(){
   return DB.items()
     .filter(i=>!i.discarded)
-    .filter(i=>{ const d=discardDiff(i.expiry); return d===0 || d===1; })
+    .filter(i=>discardDiff(i.expiry) <= 1)
     .sort((a,b)=> discardDiff(a.expiry)-discardDiff(b.expiry) || (a.name||'').localeCompare(b.name||'','ja'));
 }
 function openBuchiaru(){
@@ -1401,7 +1402,7 @@ function bmNext(){
   if(bmQueue.length===0){
     if(bmKept.length>0){
       bmPrompt('おわるけ？', [
-        {label:'とっとくカードへもう一回みるじゃん', cls:'second', act:()=>{ bmQueue=bmKept; bmKept=[]; bmNext(); }},
+        {label:'とっとくカードへえ一回みるじゃん', cls:'second', act:()=>{ bmQueue=bmKept; bmKept=[]; bmNext(); }},
         {label:'おわるじゃん', cls:'quiet', act:bmFinish}
       ]);
     } else bmFinish();
@@ -1410,7 +1411,7 @@ function bmNext(){
   const it = bmQueue[0];
   if(discardDiff(it.expiry)===1 && !bmTomorrowOK){
     const btns=[{label:'みるじゃん', cls:'primary', act:()=>{ bmTomorrowOK=true; bmNext(); }}];
-    if(bmKept.length>0) btns.push({label:'とっとくカードへもう一回みるじゃん', cls:'second',
+    if(bmKept.length>0) btns.push({label:'とっとくカードへえ一回みるじゃん', cls:'second',
       act:()=>{ bmQueue=bmKept.concat(bmQueue); bmKept=[]; bmNext(); }});
     btns.push({label:'おわるじゃん', cls:'quiet', act:bmFinish});
     bmPrompt('明日のもみるけ？', btns);
@@ -1426,7 +1427,7 @@ function bmRender(it){
   el.innerHTML =
     (th? `<img class="bimg" src="${th}" alt="">` : `<div class="bnoimg">画像なし</div>`) +
     `<div class="bname">${esc(it.name)}</div>` +
-    `<div class="bday ${d===0?'today':'tomo'}">${d===0?'今日廃棄':'明日廃棄'}</div>` +
+    `<div class="bday ${d<0?'over':(d===0?'today':'tomo')}">${d<0? (-d)+'日超過' : (d===0?'今日廃棄':'明日廃棄')}</div>` +
     (it.repeat? `<div class="bday rep">繰り返し</div>` : '') +
     `<div class="bqty">${it.qty!=null? it.qty+'点' : '—'}</div>`;
   const stage=$('#bmStage');

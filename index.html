@@ -30,7 +30,8 @@
   }
   header .sub{font-size:12px; font-weight:400; opacity:.9;}
   header .right{margin-left:auto; display:flex; align-items:center; gap:10px;}
-  header #storeBtn{background:rgba(255,255,255,.2); color:#fff; border:none; border-radius:20px; padding:5px 12px; font-size:13px; font-weight:600; cursor:pointer;}
+  header #storeBtn{background:rgba(255,255,255,.2); color:#fff; border:none; border-radius:20px; padding:5px 12px; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:5px;}
+  header #storeBtn svg{width:14px; height:14px; flex:0 0 auto; opacity:.95;}
   header .apptitle{font-size:18px; font-weight:700;}
   header .apptitle .fuji{font-size:16px;}
   main{padding:14px; max-width:640px; margin:0 auto;}
@@ -78,8 +79,17 @@
   .btn.sec{background:#eef0f3; color:var(--text);}
   .btn.sm{padding:8px 12px; width:auto; font-size:14px;}
   .btn.ghost{background:#eef0f3; color:var(--text);}
+  .lockbtn{border:none; border-radius:10px; padding:13px; font-weight:700; width:100%; color:#fff; cursor:pointer; font-size:15px; letter-spacing:.02em;}
+  .lockbtn::before{content:""; display:inline-block; width:9px; height:9px; border-radius:50%; background:#fff; margin-right:8px; vertical-align:1px;}
+  .lockbtn.locked{background:var(--green);}
+  .lockbtn.locked:active{background:var(--green-d);}
+  .lockbtn.unlocked{background:var(--red);}
+  .lockbtn.unlocked:active{background:#b4302a;}
   .linkbtn{background:none; border:none; color:var(--green); font-weight:700; font-size:13px; cursor:pointer; text-decoration:underline; padding:2px;}
-  .gatestate{background:#eef7f0; border-radius:8px; padding:8px 10px; font-size:13px; margin:0 0 12px;}
+  .gatestate{background:#eef7f0; border-radius:8px; padding:8px 10px; font-size:13px; margin:0 0 16px;}
+  .gate-label{font-size:11px; font-weight:700; letter-spacing:.06em; color:var(--gray); margin:0 0 8px;}
+  .gate-sec{margin-top:20px; padding-top:16px; border-top:1px solid var(--line);}
+  .gate-help{font-size:12px; color:var(--gray); line-height:1.65; margin:8px 0 0;}
   .chips{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;}
   .chip{background:#eef0f3; border:none; border-radius:20px; padding:8px 14px; font-size:14px; cursor:pointer;}
   .chip:active{background:#dde1e6;}
@@ -166,7 +176,7 @@
 </head>
 <body>
 <header>
-  <button id="storeBtn" type="button">未接続</button>
+  <button id="storeBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span id="storeBtnLabel">未接続</span></button>
   <span class="right">
     <span class="sub" id="syncDot">●</span>
     <span class="sub" id="clock"></span>
@@ -282,33 +292,32 @@
   <div class="sheet">
     <h2>合言葉で接続</h2>
     <p class="gatestate muted" id="gateAuth">ログインなしで参加できます</p>
-    <p class="muted" style="margin:0 0 12px; line-height:1.6">同じ「合言葉」を入れた端末どうしで、データが共有されます。好きな英数字を決めてください。<br>例：<b>bucharu</b></p>
+
+    <p class="gate-label">合言葉</p>
     <input id="storeInput" placeholder="例）bucharu" autocapitalize="off" autocorrect="off" spellcheck="false">
-    <button class="btn" id="storeSave" style="margin-top:14px">接続する</button>
+    <button class="btn" id="storeSave" style="margin-top:12px">接続する</button>
+    <p class="gate-help">同じ合言葉を入れた端末どうしでデータが共有されます。</p>
+    <p class="gate-help" id="gateGoogleRow">この端末をメイン（管理用）にするには <button type="button" id="gateGoogle" class="linkbtn">Googleでログイン</button></p>
 
-    <div id="ownerPanel" style="display:none; margin-top:14px; padding-top:12px; border-top:1px solid #e3e6ea">
-      <p class="muted" style="margin:0 0 8px; font-size:13px"><b>管理（メイン端末）</b></p>
-      <p class="muted" id="lockState" style="margin:0 0 8px; font-size:13px">解錠中</p>
-      <button class="btn ghost" id="lockToggle" type="button">施錠する</button>
-      <p class="muted" style="margin-top:8px; font-size:12px">施錠すると新しい端末は参加できません。使う端末を全部登録し終えたら施錠すると安全です。</p>
-
-      <div style="margin-top:14px; padding-top:12px; border-top:1px solid #e3e6ea">
-        <p class="muted" style="margin:0 0 8px; font-size:13px"><b>バックアップ</b></p>
-        <div style="display:flex; gap:8px; flex-wrap:wrap">
-          <button class="btn ghost" id="bkExport" type="button" style="flex:1; min-width:120px">書き出す</button>
-          <button class="btn ghost" id="bkImport" type="button" style="flex:1; min-width:120px">復元する</button>
+    <div id="ownerPanel" style="display:none">
+      <div class="gate-sec">
+        <p class="gate-label">管理</p>
+        <button class="lockbtn unlocked" id="lockToggle" type="button">解錠中</button>
+        <p class="gate-help">タップで切り替え。<b>解錠中（赤）</b>は合言葉で誰でも参加でき、<b>施錠中（緑）</b>は新しい端末の参加を止めます。使う端末を登録し終えたら施錠すると安全です。</p>
+      </div>
+      <div class="gate-sec">
+        <p class="gate-label">バックアップ</p>
+        <div style="display:flex; gap:8px">
+          <button class="btn ghost" id="bkExport" type="button" style="flex:1">書き出す</button>
+          <button class="btn ghost" id="bkImport" type="button" style="flex:1">復元する</button>
         </div>
         <input type="file" id="bkFile" accept="application/json,.json" style="display:none">
-        <p class="muted" style="margin-top:8px; font-size:12px">「書き出す」で全データをファイル保存。万一のときは「復元する」でそのファイルから戻せます（既存データは残したまま上書き）。</p>
+        <p class="gate-help">月1回ほど「書き出す」でファイル保存を。万一のとき「復元する」で戻せます。</p>
       </div>
     </div>
 
-    <p class="muted" style="margin-top:14px; font-size:12px; text-align:center">
-      この端末をメイン（管理用）にする方は<br>
-      <button type="button" id="gateGoogle" class="linkbtn">Googleでログイン</button>
-    </p>
-    <p class="muted" style="margin-top:10px; font-size:11px; text-align:center">
-      <a href="terms.html" target="_blank" rel="noopener" style="color:#8a92a0">利用規約・プライバシーポリシー</a>
+    <p class="gate-sec" style="text-align:center; margin-top:22px">
+      <a href="terms.html" target="_blank" rel="noopener" style="color:var(--gray); font-size:11px">利用規約・プライバシーポリシー</a>
     </p>
   </div>
 </div>
@@ -461,7 +470,7 @@ function setSyncStatus(s){
   if(s==='online'){ el.textContent='● 同期中'; el.style.color='#c7f0d5'; }
   else { el.textContent='● オフライン'; el.style.color='#ffd9a8'; }
 }
-function updateStoreLabel(){ const b=$('#storeBtn'); if(b) b.textContent=(getStore()||'未接続'); }
+function updateStoreLabel(){ const b=$('#storeBtnLabel'); if(b) b.textContent=(getStore()||'未接続'); }
 function openStoreGate(){ $('#storeInput').value=getStore(); renderGateState(); $('#storeGate').classList.add('show'); setTimeout(()=>$('#storeInput').focus(),100); }
 
 // ゲート画面のログイン状態表示を更新
@@ -470,10 +479,10 @@ function renderGateState(){
   if(isOwnerUser()){
     info.innerHTML='メイン端末：<b>'+esc(ownerLabel())+'</b> <button type="button" id="gateSignout" class="linkbtn">ログアウト</button>';
     const so=$('#gateSignout'); if(so) so.onclick=()=>{ fbAuth.signOut().then(()=>{ location.reload(); }); };
-    $('#gateGoogle').style.display='none';
+    $('#gateGoogleRow').style.display='none';
   } else {
     info.textContent='ログインなしで参加できます';
-    $('#gateGoogle').style.display='';
+    $('#gateGoogleRow').style.display='';
   }
   refreshOwnerPanel();
 }
@@ -545,8 +554,10 @@ function refreshOwnerPanel(){
     if(!isMine){ p.style.display='none'; return; }
     p.style.display='';
     const locked=STORE_META.locked===true;
-    $('#lockState').textContent=locked?'施錠中（新しい端末は参加できません）':'解錠中（合言葉で参加できます）';
-    $('#lockToggle').textContent=locked?'解錠する':'施錠する';
+    const lb=$('#lockToggle');
+    lb.textContent=locked?'施錠中':'解錠中';
+    lb.classList.toggle('locked', locked);
+    lb.classList.toggle('unlocked', !locked);
   }, ()=>{});
 }
 function toggleLock(){

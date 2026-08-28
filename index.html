@@ -562,7 +562,13 @@ function startSync(){
     ITEMS = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
     setSyncStatus(snap.metadata.fromCache ? 'offline' : 'online');
     refreshUI();
-  }, err=>{ console.warn('items sync', err); setSyncStatus('offline'); });
+  }, err=>{
+    console.warn('items sync', err); setSyncStatus('offline');
+    if(err && err.code==='permission-denied'){
+      showToast('接続できませんでした。合言葉が正しいか、メイン端末が施錠していないかご確認ください');
+      stopSync(); openStoreGate();
+    }
+  });
   unsubMaster = b.collection('master').onSnapshot(snap=>{
     MASTER={}; snap.docs.forEach(d=> MASTER[d.id]=d.data());
   }, err=>{ console.warn('master sync', err); });
@@ -633,15 +639,14 @@ async function connectStore(){
     else { showCreatePrompt(sid); } // 未作成 → 作成/引き継ぎを促す
     return;
   }
-  // スタッフ（匿名）：自分の端末を参加登録してから同期
-  try{
-    await fbDb.collection('stores').doc(sid).collection('members').doc(u.uid)
-      .set({joinedAt:new Date().toISOString()});
-    startSync(); $('#storeGate').classList.remove('show');
-  }catch(e){
-    console.warn('join', e);
-    showToast('接続できませんでした。合言葉が正しいか、メイン端末で作成済みかご確認ください');
-  }
+  // サブ端末（匿名）：参加登録は初回だけ。登録の成否を待たずに同期を開始する
+  // （既に参加済みの端末や電波が弱い時に、ここで止まって同期されない問題を防ぐ）
+  const memberRef = fbDb.collection('stores').doc(sid).collection('members').doc(u.uid);
+  memberRef.get()
+    .then(m=>{ if(!m.exists) return memberRef.set({joinedAt:new Date().toISOString()}); })
+    .catch(e=>console.warn('join', e));
+  startSync();                       // 実際に読めるかどうかで接続の成否を判断する
+  $('#storeGate').classList.remove('show');
 }
 
 // オーナー：この合言葉で店舗を新規作成（既存データがあればそのまま引き継ぐ）

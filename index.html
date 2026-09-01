@@ -126,6 +126,7 @@
 
   .seg{display:flex; background:#eef0f3; border-radius:10px; padding:4px; margin-bottom:14px;}
   .seg button{flex:1; border:none; background:none; padding:9px 4px; border-radius:8px; font-size:14px; font-weight:600; color:var(--gray); cursor:pointer; white-space:nowrap;}
+  .janShow{background:#eef1f5; border-radius:10px; padding:9px 12px; font-size:13px; color:var(--gray); text-align:center;}
   .repeatToggle{display:flex; align-items:center; justify-content:space-between; gap:12px; background:#f7f8fa; border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:16px;}
   .rt-title{font-weight:700; font-size:14px;}
   .rt-sub{font-size:12px; color:var(--gray); margin-top:2px;}
@@ -250,23 +251,41 @@
 
   <!-- スキャン -->
   <section class="tab active" id="tab-scan">
-    <div class="scanBox" id="scanBox">
-      <div class="placeholder" id="scanPlaceholder">カメラでバーコードを読み取ります<br>「カメラ開始」を押してください</div>
-      <video id="video" playsinline style="display:none"></video>
-      <div class="frame" id="frame" style="display:none"></div>
-      <div class="hint" id="scanHint" style="display:none">バーコードを枠内に</div>
-    </div>
-    <div class="row" style="margin-top:12px">
-      <button class="btn" id="startCam"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;vertical-align:-4px;margin-right:7px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>カメラ開始</button>
-      <button class="btn sec" id="stopCam" style="display:none">停止</button>
+    <!-- ステップ1：はじめる -->
+    <div id="scanStep0">
+      <div class="card" style="text-align:center; padding:30px 18px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;color:var(--green)"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 12h10"/></svg>
+        <div style="font-weight:700; font-size:19px; margin-top:12px">商品を登録します</div>
+        <p class="muted" style="margin:8px 0 20px">バーコードを読み取ってから、<br>廃棄日や個数を入力します。</p>
+        <button class="btn" id="beginBtn">登録を開始</button>
+      </div>
     </div>
 
-    <div class="card" id="entryCard" style="margin-top:14px">
-      <label>バーコード(JAN)</label>
-      <div class="row">
-        <input id="jan" inputmode="numeric" placeholder="手入力も可能">
-        <button class="btn sec sm" id="lookupBtn" style="flex:0 0 auto">確認</button>
+    <!-- ステップ2：バーコード -->
+    <div id="scanStep1" style="display:none">
+      <div class="scanBox" id="scanBox">
+        <div class="placeholder" id="scanPlaceholder">カメラを起動しています…</div>
+        <video id="video" playsinline style="display:none"></video>
+        <div class="frame" id="frame" style="display:none"></div>
+        <div class="hint" id="scanHint" style="display:none">バーコードを枠内に</div>
       </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn sec" id="scanCancel">やめる</button>
+        <button class="btn sec" id="skipScan">バーコードなしで進む</button>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <label>番号を手で入れる場合</label>
+        <div class="row">
+          <input id="jan" inputmode="numeric" placeholder="バーコードの番号">
+          <button class="btn sec sm" id="lookupBtn" style="flex:0 0 auto">この番号で進む</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ステップ3：商品情報 -->
+    <div id="scanStep2" style="display:none">
+    <div class="card" id="entryCard">
+      <div class="janShow" id="janShow"></div>
 
       <div class="repeatToggle">
         <div>
@@ -309,6 +328,8 @@
       </div>
 
       <button class="btn" id="saveBtn" style="margin-top:16px">✓ 登録する</button>
+      <button class="btn sec" id="entryCancel" style="margin-top:10px">やめる</button>
+    </div>
     </div>
   </section>
 
@@ -444,6 +465,14 @@
     <h2>商品を編集</h2>
     <label>商品名</label>
     <input id="eName" placeholder="例） 幕の内弁当">
+
+    <div class="repeatToggle">
+      <div>
+        <div class="rt-title">繰り返し商品</div>
+        <div class="rt-sub">和菓子・珍味など鮮度が短い商品</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="eRepeatChk"><span class="slider"></span></label>
+    </div>
 
     <label>廃棄日（期限）</label>
     <div class="chips" id="eChips">
@@ -782,6 +811,8 @@ document.querySelectorAll('nav button').forEach(b=>{
     b.classList.add('on');
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     $('#tab-'+b.dataset.tab).classList.add('active');
+    // スキャンから離れるときはカメラを止める（バーコード待ちなら最初の画面へ）
+    if(b.dataset.tab!=='scan'){ if(scanStep===1){ clearEntry(); scanGoStep(0); } else stopCam(); }
     if(b.dataset.tab==='list') renderListTab();
   };
 });
@@ -865,12 +896,10 @@ function zxLoop(){
   }
   zxTimer=setTimeout(()=>{ if(scanning) requestAnimationFrame(zxLoop); }, 110);
 }
-$('#startCam').onclick = startCam;
-$('#stopCam').onclick = stopCam;
 async function startCam(){
   const v=$('#video');
   const showUI=()=>{ v.style.display='block'; $('#frame').style.display='block'; $('#scanHint').style.display='block';
-    $('#scanPlaceholder').style.display='none'; $('#startCam').style.display='none'; $('#stopCam').style.display='block'; };
+    $('#scanPlaceholder').style.display='none'; };
   try{
     if(detector){
       // Android Chrome 等：ブラウザ標準APIで読取（高速）
@@ -898,8 +927,43 @@ function stopCam(){
   if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
   const v=$('#video'); v.style.display='none'; $('#frame').style.display='none'; $('#scanHint').style.display='none';
   $('#scanPlaceholder').style.display='block';
-  $('#startCam').style.display='block'; $('#stopCam').style.display='none';
 }
+
+/* ============ 登録の流れ（開始 → バーコード → 商品情報） ============
+   前の商品の入力が残ったまま次を登録してしまう事故を防ぐため、
+   「登録を開始」のたびに入力欄をすべて空にしてから始める。 */
+function clearEntry(){
+  $('#jan').value=''; $('#pname').value=''; $('#qty').value=1;
+  $('#edate').value=''; $('#masterNote').textContent='';
+  $('#repeatChk').checked=false;
+  currentImg=''; showImgPreview();
+  setActiveChip(null);
+}
+let scanStep=0;
+function scanGoStep(n){
+  scanStep=n;
+  $('#scanStep0').style.display = n===0 ? 'block' : 'none';
+  $('#scanStep1').style.display = n===1 ? 'block' : 'none';
+  $('#scanStep2').style.display = n===2 ? 'block' : 'none';
+  if(n!==1) stopCam();
+}
+function beginEntry(){ clearEntry(); scanGoStep(1); startCam(); }
+// バーコードが決まったら（読み取り・手入力・スキップ）商品情報の入力へ
+function toEntryForm(){
+  stopCam();
+  const j=$('#jan').value.trim();
+  $('#janShow').textContent = j ? ('バーコード '+j) : 'バーコードなし';
+  scanGoStep(2);
+}
+$('#beginBtn').onclick   = beginEntry;
+$('#scanCancel').onclick = ()=>{ clearEntry(); scanGoStep(0); };
+$('#skipScan').onclick   = ()=>{ $('#jan').value=''; $('#masterNote').textContent=''; toEntryForm(); };
+$('#entryCancel').onclick= ()=>{
+  const dirty = $('#pname').value.trim() || $('#edate').value || currentImg;
+  if(!dirty){ clearEntry(); scanGoStep(0); return; }
+  appConfirm('入力した内容を破棄して、最初に戻りますか？',
+    ()=>{ clearEntry(); scanGoStep(0); }, '破棄する', 'var(--red)');
+};
 let lastCode='', lastTime=0;
 async function loopDetect(){
   if(!scanning) return;
@@ -920,12 +984,16 @@ function onScanned(code){
   if(navigator.vibrate) navigator.vibrate(60);
   $('#jan').value = code;
   lookup(code);
-  stopCam(); // 電池節約：読み取れたら自動でカメラを停止
+  toEntryForm(); // 読み取れたら商品情報の入力へ（カメラもここで止まる）
   showToast('読み取りました：'+code);
 }
 
 /* ============ 商品マスター参照 ============ */
-$('#lookupBtn').onclick = ()=> lookup($('#jan').value.trim());
+$('#lookupBtn').onclick = ()=>{
+  const c=$('#jan').value.trim();
+  if(!c){ showToast('番号を入力してください'); return; }
+  lookup(c); toEntryForm();
+};
 function lookup(code){
   if(!code) return;
   const m = DB.master();
@@ -1031,11 +1099,10 @@ $('#saveBtn').onclick = ()=>{
   b.collection('items').doc(id).set({jan, name, expiry, qty, img:itemImg, repeat, createdAt:new Date().toISOString(), discarded:false});
   // マスター更新（次回から自動表示。merge で既存の画像/名前を消さない）
   if(jan) b.collection('master').doc(jan).set(img?{name, img}:{name}, {merge:true});
-  // リセット
-  $('#pname').value=''; $('#jan').value=''; $('#qty').value=1; $('#masterNote').textContent='';
-  $('#repeatChk').checked=false;
-  currentImg=''; showImgPreview();
+  // 入力を空にして「登録を開始」の画面へ戻す
+  clearEntry();
   $('#scanHint').textContent='バーコードを枠内に';
+  scanGoStep(0);
   if(navigator.vibrate) navigator.vibrate([40,40,40]);
   showToast(`登録しました：${name}${qty!=null?` ${qty}点`:''}`);
 };
@@ -1151,6 +1218,7 @@ window.editItem=id=>{
   const d=new Date(it.expiry);
   $('#eDate').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   $('#eQty').value = it.qty==null ? '' : it.qty;
+  $('#eRepeatChk').checked = !!it.repeat;
   editImg=thumbOf(it); ePreview(); // 記録 or マスターの現画像を表示
   document.querySelectorAll('#eChips .chip').forEach(c=>c.classList.remove('on'));
   $('#editModal').classList.add('show');
@@ -1166,6 +1234,11 @@ document.querySelectorAll('#eChips .chip').forEach(c=>{
   };
 });
 $('#eDate').onchange=()=>{ document.querySelectorAll('#eChips .chip').forEach(x=>x.classList.remove('on')); document.querySelector('#eChips .chip[data-preset="custom"]').classList.add('on'); };
+$('#eRepeatChk').onchange=()=>{
+  const q=$('#eQty');
+  if($('#eRepeatChk').checked) q.value='';
+  else if(!q.value.trim()) q.value=1;
+};
 $('#eQtyMinus').onclick=()=>{ const q=$('#eQty'); q.value=Math.max(1,(+q.value||1)-1); };
 $('#eQtyPlus').onclick=()=>{ const q=$('#eQty'); q.value=(+q.value||1)+1; };
 function onEditImgPicked(e){ const f=e.target.files&&e.target.files[0]; if(!f) return; resizeImage(f,400,0.6).then(d=>{ editImg=d; ePreview(); }).catch(()=>showToast('画像を読み込めませんでした')); e.target.value=''; }
@@ -1178,6 +1251,7 @@ $('#eSave').onclick=()=>{
   if(!editingId) return;
   const name=$('#eName').value.trim(), date=$('#eDate').value;
   const eQtyRaw=$('#eQty').value.trim(); const qty = eQtyRaw==='' ? null : Math.max(1,+eQtyRaw||1);
+  const repeat=$('#eRepeatChk').checked;
   if(!name){ showToast('商品名を入力してください'); return; }
   if(!date){ showToast('廃棄日を選んでください'); return; }
   const expiry=new Date(`${date}T12:00:00`).toISOString();
@@ -1185,7 +1259,7 @@ $('#eSave').onclick=()=>{
   const b=baseRef();
   // バーコードあり＝画像はマスターへ集約し記録側は空に（重複解消）。なし＝記録に保持
   const itemImg = (it && it.jan) ? '' : editImg;
-  b.collection('items').doc(editingId).update({name, expiry, qty, img:itemImg});
+  b.collection('items').doc(editingId).update({name, expiry, qty, img:itemImg, repeat});
   if(it && it.jan) b.collection('master').doc(it.jan).set(editImg?{name, img:editImg}:{name}, {merge:true});
   $('#editModal').classList.remove('show'); editingId=null;
   showToast('更新しました');

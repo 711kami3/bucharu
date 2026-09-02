@@ -363,7 +363,7 @@
       <label>個数</label>
       <div class="row" style="align-items:center">
         <button class="btn sec sm" id="qtyMinus" style="flex:0 0 52px">−</button>
-        <input id="qty" type="number" value="1" min="1" style="text-align:center">
+        <input id="qty" type="number" min="1" placeholder="未入力" style="text-align:center">
         <button class="btn sec sm" id="qtyPlus" style="flex:0 0 52px">＋</button>
       </div>
 
@@ -538,7 +538,7 @@
     <label>個数</label>
     <div class="row" style="align-items:center">
       <button class="btn sec sm" id="eQtyMinus" style="flex:0 0 52px">−</button>
-      <input id="eQty" type="number" value="1" min="1" style="text-align:center">
+      <input id="eQty" type="number" min="1" placeholder="未入力" style="text-align:center">
       <button class="btn sec sm" id="eQtyPlus" style="flex:0 0 52px">＋</button>
     </div>
 
@@ -989,7 +989,7 @@ function stopCam(){
    前の商品の入力が残ったまま次を登録してしまう事故を防ぐため、
    「登録を開始」のたびに入力欄をすべて空にしてから始める。 */
 function clearEntry(){
-  $('#jan').value=''; $('#pname').value=''; $('#qty').value=1;
+  $('#jan').value=''; $('#pname').value=''; $('#qty').value='';
   $('#edate').value=''; $('#masterNote').textContent='';
   $('#repeatChk').checked=false;
   currentImg=''; showImgPreview();
@@ -1024,6 +1024,8 @@ function toEntryForm(){
   stopCam();
   const j=$('#jan').value.trim();
   $('#janShow').textContent = j ? ('バーコード '+j) : 'バーコードなし';
+  // 廃棄日は毎回まっさらに。前の商品の日付が残って誤登録になるのを防ぐ
+  $('#edate').value=''; setActiveChip(null);
   scanGoStep(2);
 }
 $('#beginBtn').onclick   = beginEntry;
@@ -1069,6 +1071,7 @@ function lookup(code){
   if(!code) return;
   const m = DB.master();
   if(m[code]){
+    // マスターから引き継ぐのは「商品名」と「画像」だけ。廃棄日・個数は毎回入力する
     $('#pname').value = m[code].name;
     if(m[code].img){ currentImg = m[code].img; showImgPreview(); }
     $('#masterNote').textContent = '✓ 登録済み商品：自動入力しました';
@@ -1105,10 +1108,9 @@ document.querySelectorAll('#quickChips .chip').forEach(c=>{
 });
 // 手動で日付を変えたら「カスタム」扱いにする
 $('#edate').onchange = ()=> setActiveChip(document.querySelector('#quickChips .chip[data-preset="custom"]'));
-$('#qtyMinus').onclick=()=>{ const q=$('#qty'); q.value=Math.max(1,(+q.value||1)-1); };
-$('#qtyPlus').onclick=()=>{ const q=$('#qty'); q.value=(+q.value||1)+1; };
-// 繰り返しをONにしたら個数を自動で空欄に（毎回「1」を消す手間をなくす）
-$('#repeatChk').onchange=()=>{ $('#qty').value = $('#repeatChk').checked ? '' : 1; };
+// 個数は空欄が既定。−は空欄のままなら何もせず、＋は空欄から1になる
+$('#qtyMinus').onclick=()=>{ const q=$('#qty'); if(!q.value.trim()) return; q.value=Math.max(1,(+q.value||1)-1); };
+$('#qtyPlus').onclick=()=>{ const q=$('#qty'); q.value=(+q.value||0)+1; };
 
 /* ============ 商品画像（任意・圧縮して保存） ============ */
 let currentImg = ''; // 登録予定の画像（data URL）／未設定は空
@@ -1305,13 +1307,8 @@ document.querySelectorAll('#eChips .chip').forEach(c=>{
   };
 });
 $('#eDate').onchange=()=>{ document.querySelectorAll('#eChips .chip').forEach(x=>x.classList.remove('on')); document.querySelector('#eChips .chip[data-preset="custom"]').classList.add('on'); };
-$('#eRepeatChk').onchange=()=>{
-  const q=$('#eQty');
-  if($('#eRepeatChk').checked) q.value='';
-  else if(!q.value.trim()) q.value=1;
-};
-$('#eQtyMinus').onclick=()=>{ const q=$('#eQty'); q.value=Math.max(1,(+q.value||1)-1); };
-$('#eQtyPlus').onclick=()=>{ const q=$('#eQty'); q.value=(+q.value||1)+1; };
+$('#eQtyMinus').onclick=()=>{ const q=$('#eQty'); if(!q.value.trim()) return; q.value=Math.max(1,(+q.value||1)-1); };
+$('#eQtyPlus').onclick=()=>{ const q=$('#eQty'); q.value=(+q.value||0)+1; };
 function onEditImgPicked(e){ const f=e.target.files&&e.target.files[0]; if(!f) return; resizeImage(f,400,0.6).then(d=>{ editImg=d; ePreview(); }).catch(()=>showToast('画像を読み込めませんでした')); e.target.value=''; }
 $('#eImgInput').onchange=onEditImgPicked;      // アルバム
 $('#eImgInputCam').onchange=onEditImgPicked;   // カメラ撮影
@@ -1645,8 +1642,7 @@ $('#bmExit').onclick = bmFinish;
 
 /* ============ 起動時 ============ */
 (function init(){
-  const t=toLocalInput(new Date());
-  $('#edate').value=t.date;
+  // 廃棄日は既定値を入れない（自分で選んでもらう。誤登録の防止）
   updateStoreLabel();
   // 店舗コード設定
   $('#storeBtn').onclick=()=>openStoreGate();

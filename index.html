@@ -19,7 +19,8 @@
   body{
     font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
     background:var(--bg); color:var(--text);
-    padding-bottom:calc(68px + env(safe-area-inset-bottom));
+    /* ナビ(71px)＋中央「ぶちゃる」ボタンの出っ張り(26px)分。内容がボタンの下に潜らないように */
+    padding-bottom:calc(98px + env(safe-area-inset-bottom));
     -webkit-user-select:none; user-select:none;
   }
   header{
@@ -100,6 +101,42 @@
   #imgModal{align-items:center; justify-content:center; padding:24px;}
   #imgModal img{max-width:100%; max-height:85vh; border-radius:12px; box-shadow:0 8px 40px rgba(0,0,0,.5);}
 
+  /* ===== スキャン／商品情報を1画面に収める ===== */
+  /* --scanH はヘッダーとナビを除いた実際の高さ。JSが実測して入れる */
+  #scanStep1{display:flex; flex-direction:column; gap:10px; height:var(--scanH,auto);}
+  #scanStep1 .scanBox{flex:1 1 auto; aspect-ratio:auto; min-height:130px;}
+  #scanStep1 .row{flex:0 0 auto; margin-top:0 !important;}
+  #scanStep1 .card{flex:0 0 auto; margin:0; padding:10px 12px;}
+  #scanStep1 .card label{margin:0 0 5px;}
+  #scanStep1 .row .btn{font-size:14px; padding:12px 8px;}
+  /* 入力項目をコンパクトに（登録・編集で共通）。入力欄は44px以上を保ちタップしやすさは維持 */
+  #scanStep2 .card{padding:11px;}
+  #scanStep2 label, #editModal label{margin:8px 0 3px;}
+  #scanStep2 input, #editModal input{padding:10px;}
+  #scanStep2 .janShow{padding:7px 12px;}
+  #scanStep2 #masterNote, #editModal #eMasterNote{margin-top:2px;}
+  #scanStep2 .repeatToggle, #editModal .repeatToggle{padding:9px 10px; margin-top:8px;}
+  #scanStep2 .chip, #editModal .chip{padding:7px 11px; font-size:13px;}
+  #scanStep2 .chips, #editModal .chips{gap:6px; flex-wrap:nowrap; margin-top:4px;}
+  #scanStep2 .imgrow, #editModal .imgrow{margin-top:4px;}
+  #scanStep2 .imgrow .btn.sm, #editModal .imgrow .btn.sm{padding:7px 10px; font-size:13px;}
+  #scanStep2 .btn{padding:11px;}
+  /* 画面の短い端末（iPhone SE など）ではさらに詰める */
+  @media (max-height:700px){
+    #scanStep2 label, #editModal label{margin:6px 0 2px;}
+    #scanStep2 .card{padding:9px;}
+    #scanStep2 .repeatToggle, #editModal .repeatToggle{margin-top:6px; padding:8px 10px;}
+    #scanStep2 .imgrow .btn.sm, #editModal .imgrow .btn.sm{padding:6px 9px; font-size:12px;}
+    /* 「商品画像」は見出しと横並びにして1行ぶん節約 */
+    #scanStep2 .lbl-img{display:inline-block; width:auto; margin:6px 10px 0 0; vertical-align:middle;}
+    #scanStep2 .lbl-img + .imgrow{display:inline-flex; margin-top:0; vertical-align:middle;}
+    #scanStep2 .janShow{padding:5px 10px; font-size:12px;}
+    #scanStep2 #masterNote{font-size:11px;}
+    #scanStep2 .btn{padding:10px;}
+    #scanStep2 input{padding:9px;}
+    #scanStep2 .chip{padding:6px 10px; font-size:12px;}
+  }
+
   .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px;}
   .card h3{margin:0 0 4px; font-size:15px;}
   .muted{color:var(--gray); font-size:13px;}
@@ -167,8 +204,11 @@
   nav button .ic svg{width:25px; height:25px; display:block;}
   /* 中央のスキャンを丸ボタンで主張 */
   nav button.fab{color:var(--green); font-weight:700;}
-  nav button.fab .ic{width:58px; height:58px; margin-top:-26px; border-radius:50%; background:#fff; align-items:center; justify-content:center; border:3px solid var(--green); box-shadow:0 5px 14px rgba(11,125,62,.32); transition:transform .12s ease;}
-  nav button.fab .ic img{width:40px; height:40px; display:block;}
+  /* 緑の円を最も外側に置き、白は内側の要素だけに持たせる。
+     （白背景＋borderを同じ要素に付けると、白がリングの下まで塗られ、
+       端末の解像度や再描画のたびに縁から白がにじみ出ることがあるため） */
+  nav button.fab .ic{flex:0 0 auto; width:58px; height:58px; margin-top:-26px; border-radius:50%; background:var(--green); align-items:center; justify-content:center; overflow:hidden; box-shadow:0 5px 14px rgba(11,125,62,.32); transition:transform .12s ease;}
+  nav button.fab .ic img{width:52px; height:52px; padding:6px; border-radius:50%; background:#fff; background-clip:padding-box; display:block;}
   nav button.fab:active .ic{transform:scale(.94);}
 
   /* ===== ぶちゃるモード ===== */
@@ -310,7 +350,7 @@
       <input id="pname" placeholder="例） 幕の内弁当">
       <div class="muted" id="masterNote" style="margin-top:4px"></div>
 
-      <label>商品画像（任意）</label>
+      <label class="lbl-img">商品画像（任意）</label>
       <div class="imgrow">
         <img id="imgPreview" alt="" style="display:none">
         <label class="btn sec sm" for="imgInputCam" style="width:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>撮影</label>
@@ -327,8 +367,10 @@
         <button class="btn sec sm" id="qtyPlus" style="flex:0 0 52px">＋</button>
       </div>
 
-      <button class="btn" id="saveBtn" style="margin-top:16px">✓ 登録する</button>
-      <button class="btn sec" id="entryCancel" style="margin-top:10px">やめる</button>
+      <div class="row" style="margin-top:14px">
+        <button class="btn sec" id="entryCancel">やめる</button>
+        <button class="btn" id="saveBtn">✓ 登録する</button>
+      </div>
     </div>
     </div>
   </section>
@@ -463,9 +505,6 @@
 <div class="modal" id="editModal">
   <div class="sheet">
     <h2>商品を編集</h2>
-    <label>商品名</label>
-    <input id="eName" placeholder="例） 幕の内弁当">
-
     <div class="repeatToggle">
       <div>
         <div class="rt-title">繰り返し商品</div>
@@ -483,12 +522,8 @@
     </div>
     <div style="margin-top:8px"><input id="eDate" type="date"></div>
 
-    <label>個数</label>
-    <div class="row" style="align-items:center">
-      <button class="btn sec sm" id="eQtyMinus" style="flex:0 0 52px">−</button>
-      <input id="eQty" type="number" value="1" min="1" style="text-align:center">
-      <button class="btn sec sm" id="eQtyPlus" style="flex:0 0 52px">＋</button>
-    </div>
+    <label>商品名</label>
+    <input id="eName" placeholder="例） 幕の内弁当">
 
     <label>商品画像（任意）</label>
     <div class="imgrow">
@@ -498,6 +533,13 @@
       <button type="button" id="eImgClear" class="btn sec sm" style="width:auto; display:none">削除</button>
       <input id="eImgInputCam" type="file" accept="image/*" capture="environment" style="display:none">
       <input id="eImgInput" type="file" accept="image/*" style="display:none">
+    </div>
+
+    <label>個数</label>
+    <div class="row" style="align-items:center">
+      <button class="btn sec sm" id="eQtyMinus" style="flex:0 0 52px">−</button>
+      <input id="eQty" type="number" value="1" min="1" style="text-align:center">
+      <button class="btn sec sm" id="eQtyPlus" style="flex:0 0 52px">＋</button>
     </div>
 
     <div class="row" style="margin-top:18px">
@@ -814,6 +856,7 @@ document.querySelectorAll('nav button').forEach(b=>{
     // スキャンから離れるときはカメラを止める（バーコード待ちなら最初の画面へ）
     if(b.dataset.tab!=='scan'){ if(scanStep===1){ clearEntry(); scanGoStep(0); } else stopCam(); }
     if(b.dataset.tab==='list') renderListTab();
+    applyBannerVisibility();
   };
 });
 // 指定タブへ移動（ぶちゃるモード終了後などに使用）
@@ -839,18 +882,31 @@ function tickClock(){ const d=new Date(); $('#clock').textContent=`${pad(d.getHo
 setInterval(tickClock,1000); tickClock();
 
 let notified = new Set();
+// バーコード読み取り中／商品情報の入力中はアラートを出さない（1画面に収めるため）
+function bannerAllowed(){
+  const tab=$('#tab-scan');
+  if(!tab || !tab.classList.contains('active')) return true; // 他タブでは通常どおり表示
+  const shown = el => el && el.style.display!=='none';
+  return !(shown($('#scanStep1')) || shown($('#scanStep2')));
+}
+// 画面切り替えのたびに呼ぶ。中身はそのままに、出す/隠すだけを切り替える
+function applyBannerVisibility(){
+  const banner = $('#alertBanner');
+  if(!banner) return;
+  banner.classList.toggle('show', banner.dataset.has==='1' && bannerAllowed());
+}
 function checkAlerts(){
   const items = DB.items().filter(i=>!i.discarded);
   const soon = items.filter(i=> statusOf(i.expiry)!=='ok');
   const banner = $('#alertBanner');
-  if(soon.length===0){ banner.classList.remove('show'); return; }
+  if(soon.length===0){ banner.dataset.has='0'; banner.classList.remove('show'); return; }
   const over = soon.filter(i=>statusOf(i.expiry)==='over');
   const near = soon.filter(i=>statusOf(i.expiry)==='soon');
   let html = '⚠️ ';
   if(over.length) html += `<b>期限超過 ${over.reduce((a,i)=>a+qtyOf(i),0)}点</b> `;
   if(near.length) html += `／ まもなく ${near.reduce((a,i)=>a+qtyOf(i),0)}点`;
   html += `<br><span class="muted">`+ soon.slice(0,3).map(i=>`${i.name}(${statusLabel(i.expiry)})`).join('・') + (soon.length>3?' 他':'') +`</span>`;
-  banner.innerHTML = html; banner.classList.add('show');
+  banner.innerHTML = html; banner.dataset.has='1'; applyBannerVisibility();
   // ブラウザ通知（許可時のみ・重複防止）
   if('Notification' in window && Notification.permission==='granted'){
     soon.forEach(i=>{
@@ -940,11 +996,26 @@ function clearEntry(){
   setActiveChip(null);
 }
 let scanStep=0;
+// スキャン画面をヘッダー／ナビを除いた実寸に合わせる（端末やSafariのURLバーに追随）
+function fitScanScreen(){
+  const head=document.querySelector('header'), nav=document.querySelector('nav');
+  if(!head||!nav) return;
+  const pad=28, fab=26; // main の上下パディング＋中央ボタンの出っ張り
+  const h=Math.max(240, Math.floor(window.innerHeight - head.offsetHeight - nav.offsetHeight - fab - pad - 2));
+  document.documentElement.style.setProperty('--scanH', h+'px');
+}
+window.addEventListener('resize', fitScanScreen);
+window.addEventListener('orientationchange', ()=>setTimeout(fitScanScreen,250));
+fitScanScreen();
+
 function scanGoStep(n){
   scanStep=n;
-  $('#scanStep0').style.display = n===0 ? 'block' : 'none';
-  $('#scanStep1').style.display = n===1 ? 'block' : 'none';
-  $('#scanStep2').style.display = n===2 ? 'block' : 'none';
+  fitScanScreen();
+  // '' にしてCSS側の display（スキャン画面は flex）を活かす
+  $('#scanStep0').style.display = n===0 ? '' : 'none';
+  $('#scanStep1').style.display = n===1 ? '' : 'none';
+  $('#scanStep2').style.display = n===2 ? '' : 'none';
+  applyBannerVisibility();
   if(n!==1) stopCam();
 }
 function beginEntry(){ clearEntry(); scanGoStep(1); startCam(); }

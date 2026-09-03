@@ -213,38 +213,83 @@
 
   /* ===== ぶちゃるモード ===== */
   .viewseg{margin-bottom:10px;}
-  .bmode{position:fixed; inset:0; z-index:60; background:var(--bg); display:none; flex-direction:column;
+  .bmode{position:fixed; inset:0; z-index:60; display:none; flex-direction:column;
+    background:radial-gradient(125% 68% at 50% 44%, #ffffff 0%, #eef1f5 58%, #e4e8ee 100%);
     padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); overscroll-behavior:none;}
   .bmode.show{display:flex;}
   .bmhead{display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--green); color:#fff;}
   .bmtitle{font-weight:700; font-size:17px;}
   .bmtitle small{font-weight:400; font-size:12px; opacity:.9;}
-  .bmcount{margin-left:auto; font-size:12px; opacity:.9;}
+  .bmcount{margin-left:auto; font-size:12.5px; opacity:.95; font-variant-numeric:tabular-nums;}
   .bmexit{background:rgba(255,255,255,.22); color:#fff; border:none; border-radius:16px; padding:6px 14px; font-size:13px; font-weight:700; cursor:pointer;}
-  .bmzone{flex:0 0 auto; height:62px; display:flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:15px; letter-spacing:.04em; transition:background .15s, color .15s;}
+  /* 進み具合 */
+  .bmbar{height:5px; background:#dfe3e8;}
+  .bmbar i{display:block; height:100%; width:0%; background:var(--green); transition:width .35s cubic-bezier(.3,.9,.4,1);}
+
+  /* 上下のゾーン */
+  .bmzone{flex:0 0 auto; height:64px; display:flex; align-items:center; justify-content:center; gap:8px;
+    font-weight:700; font-size:15.5px; letter-spacing:.04em; will-change:transform;
+    transition:background .18s, color .18s, transform .18s;}
+  .bmzone svg{width:21px; height:21px;}
   .bmzone.top{background:#fde9e7; color:#b3372f;}
   .bmzone.bottom{background:#e9f2fb; color:#2f6ea8;}
-  .bmzone.top.hot{background:var(--red); color:#fff;}
-  .bmzone.bottom.hot{background:#2f6ea8; color:#fff;}
-  .bmstage{flex:1 1 auto; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:14px;}
-  .bcard{width:min(100%,340px); background:var(--card); border:1px solid var(--line); border-radius:18px;
-    box-shadow:0 10px 30px rgba(20,30,40,.13); padding:18px; text-align:center; touch-action:none; user-select:none; cursor:grab;}
-  .bcard .bimg{width:100%; height:190px; object-fit:contain; border-radius:12px; background:#eef0f3; display:block;}
-  .bcard .bnoimg{width:100%; height:190px; border-radius:12px; background:#eef0f3; display:flex; align-items:center; justify-content:center; color:var(--gray); font-size:13px;}
-  .bcard .bname{font-size:19px; font-weight:700; margin-top:12px; line-height:1.4; word-break:break-word;}
-  .bcard .bmeta{margin-top:6px; font-size:13px; color:var(--gray);}
-  .bcard .bqty{margin-top:8px; font-size:15px; font-weight:700;}
-  .bcard .bday{display:inline-block; margin-top:8px; font-size:12px; font-weight:700; border-radius:12px; padding:3px 10px;}
+  .bmzone.top.hot{background:var(--red); color:#fff; transform:scale(1.03);}
+  .bmzone.bottom.hot{background:#2f6ea8; color:#fff; transform:scale(1.03);}
+
+  .bmstage{flex:1 1 auto; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:16px;}
+
+  /* カード */
+  .bcard{position:relative; z-index:1; width:min(100%,340px); background:var(--card);
+    border:1px solid var(--line); border-radius:22px; overflow:hidden; padding:0 0 18px; text-align:center;
+    box-shadow:0 18px 44px rgba(20,30,40,.16), 0 2px 6px rgba(20,30,40,.06);
+    touch-action:none; user-select:none; cursor:grab;}
+  .bcard .baccent{height:6px; background:var(--red);}
+  .bcard .baccent.tomo{background:var(--orange);}
+  .bcard .baccent.over{background:#8e1f1a;}
+  .bcard .bpad{padding:16px 18px 0;}
+  .bcard .bimg{width:100%; height:184px; object-fit:contain; border-radius:14px; background:#f1f3f6; display:block;}
+  .bcard .bnoimg{width:100%; height:184px; border-radius:14px; background:#f1f3f6; color:#9aa2ad; font-size:12.5px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;}
+  .bcard .bnoimg svg{width:34px; height:34px;}
+  .bcard .bname{font-size:21px; font-weight:700; margin-top:14px; line-height:1.35; word-break:break-word;}
+  .bcard .bjan{margin-top:8px; font-size:11.5px; color:#9aa2ad; letter-spacing:.06em;}
+  .bcode{display:block; margin:0 auto; width:min(100%,236px); height:auto;}
+  .bcodebox{background:#fff; border:1px solid var(--line); border-radius:10px;
+    padding:7px 10px; margin-top:10px; justify-content:center; font-size:13px; color:var(--gray);}
+  .bcodebox .bcode{width:min(100%,252px);}
+  .bcard .btags{margin-top:10px; display:flex; gap:6px; justify-content:center; flex-wrap:wrap;}
+  .bcard .bday{display:inline-block; font-size:12px; font-weight:700; border-radius:12px; padding:4px 11px;}
   .bcard .bday.today{background:#fdece9; color:#b3372f;}
   .bcard .bday.tomo{background:#fff3e0; color:#a35c00;}
   .bcard .bday.over{background:var(--red); color:#fff;}
-  .bcard .bday.rep{background:#e7f4ec; color:var(--green); margin-left:6px;}
-  .bhint{position:absolute; left:0; right:0; bottom:6px; text-align:center; font-size:11.5px; color:var(--gray);}
+  .bcard .bday.rep{background:#e7f4ec; color:var(--green);}
+  .bcard .bqty{margin-top:12px; font-size:16px; font-weight:700;}
+  /* 次の商品を後ろに薄く重ねる（あと何枚あるかが見た目で分かる） */
+  .bcard.behind{position:absolute; left:50%; top:50%; z-index:0; pointer-events:none; opacity:.5;
+    transform:translate(-50%,-50%) translateY(18px) scale(.93); filter:saturate(.8);
+    box-shadow:0 10px 26px rgba(20,30,40,.10);}
+  /* スワイプ中に浮かぶスタンプ */
+  .bstamp{position:absolute; left:50%; z-index:3; padding:7px 20px; border-radius:12px;
+    font-size:23px; font-weight:800; letter-spacing:.08em; border:4px solid currentColor;
+    background:rgba(255,255,255,.97); opacity:0; pointer-events:none;}
+  .bstamp.up{top:24px; color:var(--red); transform:translateX(-50%) rotate(-9deg);}
+  .bstamp.down{bottom:24px; color:#2f6ea8; transform:translateX(-50%) rotate(9deg);}
+  /* スワイプの案内（指のアイコンが上下に動く） */
+  .bmguide{position:absolute; left:0; right:0; bottom:8px; z-index:0; display:flex;
+    flex-direction:column; align-items:center; gap:1px; opacity:.62; pointer-events:none; transition:opacity .18s;}
+  .bmguide.hide{opacity:0;}
+  .bmguide .gchev{width:19px; height:19px;}
+  .bmguide .gchev.up{color:var(--red); animation:gup 2s ease-in-out infinite;}
+  .bmguide .gchev.down{color:#2f6ea8; animation:gdn 2s ease-in-out infinite;}
+  .bmguide .ghand{width:31px; height:31px; color:#4b5462; animation:ghand 2s ease-in-out infinite;}
+  @keyframes ghand{0%,100%{transform:translateY(5px);} 50%{transform:translateY(-5px);}}
+  @keyframes gup{0%,100%{opacity:.2;} 50%{opacity:1;}}
+  @keyframes gdn{0%,100%{opacity:1;} 50%{opacity:.2;}}
+  @media (prefers-reduced-motion: reduce){ .bmguide *{animation:none !important;} }
   /* スワイプ確定アニメ */
-  .bcard.gone-up{transition:transform .32s cubic-bezier(.4,0,.6,1), opacity .32s; transform:translateY(-120vh) scale(.5) rotate(-8deg); opacity:0;}
-  .bcard.gone-down{transition:transform .3s ease-in, opacity .3s; transform:translateY(90vh) scale(.9); opacity:0;}
-  .bcard.spring{transition:transform .22s cubic-bezier(.2,.8,.3,1);}
+  .bcard.gone-up{transition:transform .34s cubic-bezier(.36,0,.5,1), opacity .34s; transform:translateY(-120vh) scale(.45) rotate(-10deg); opacity:0;}
+  .bcard.gone-down{transition:transform .3s ease-in, opacity .3s; transform:translateY(95vh) scale(.88); opacity:0;}
+  .bcard.spring{transition:transform .3s cubic-bezier(.2,1.25,.4,1);}
   /* プロンプト・ふじばあ */
   .bmask{position:absolute; inset:0; background:rgba(20,30,25,.45); display:none; align-items:center; justify-content:center; padding:20px; z-index:5;}
   .bmask.show{display:flex;}
@@ -419,10 +464,11 @@
     <span class="bmcount" id="bmCount"></span>
     <button type="button" class="bmexit" id="bmExit">おわる</button>
   </div>
+  <div class="bmbar"><i id="bmBar"></i></div>
 
-  <div class="bmzone top" id="bmZoneTop"><span>ぶちゃる</span></div>
-  <div class="bmstage" id="bmStage"></div>
-  <div class="bmzone bottom" id="bmZoneBottom"><span>とっとく</span></div>
+  <div class="bmzone top" id="bmZoneTop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M9 6V4h6v2M6.5 6l1 14a2 2 0 0 0 2 1.9h5a2 2 0 0 0 2-1.9l1-14"/></svg><span>ぶちゃる</span></div>
+  <div class="bmstage" id="bmStage"><div class="bmguide" id="bmGuide" aria-hidden="true"><svg class="gchev up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg><svg class="ghand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11.5V6a1.5 1.5 0 0 1 3 0v5"/><path d="M12 11V4.8a1.5 1.5 0 0 1 3 0V11"/><path d="M15 11.5V7.5a1.5 1.5 0 0 1 3 0V14"/><path d="M9 11.5v-2a1.5 1.5 0 0 0-3 0V15a7 7 0 0 0 7 7h1a5 5 0 0 0 5-5v-3"/></svg><svg class="gchev down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div></div>
+  <div class="bmzone bottom" id="bmZoneBottom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5V11H3z"/><path d="M4.5 11v8A1.5 1.5 0 0 0 6 20.5h12a1.5 1.5 0 0 0 1.5-1.5v-8"/><path d="M10 15h4"/></svg><span>とっとく</span></div>
 
   <!-- 選択プロンプト -->
   <div class="bmask" id="bmPrompt">
@@ -505,6 +551,7 @@
 <div class="modal" id="editModal">
   <div class="sheet">
     <h2>商品を編集</h2>
+    <div class="bcodebox" id="eJanShow" style="display:none"></div>
     <div class="repeatToggle">
       <div>
         <div class="rt-title">繰り返し商品</div>
@@ -1277,6 +1324,51 @@ function bindThumbZoom(container){
 bindThumbZoom($('#listArea'));
 bindThumbZoom($('#sheetBody'));
 
+/* ============ JAN（バーコード）の描画 ============
+   13桁=JAN-13／8桁=JAN-8 に対応。画像も外部ライブラリも使わず、
+   数字から縞模様を組み立ててSVGで描く（読み込みは増えない）。 */
+const EAN_L=['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'];
+const EAN_G=['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'];
+const EAN_R=['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'];
+const EAN_P=['000000','001011','001101','001110','010011','011001','011100','010101','010110','011010']; // 先頭桁で左6桁の並びが決まる
+function barcodeSVG(code){
+  const c=String(code||'').replace(/\D/g,'');
+  if(c.length!==13 && c.length!==8) return null;   // 規格外の番号は数字のまま出す
+  const d13 = c.length===13;
+  let bits='101';
+  if(d13){
+    const par=EAN_P[+c[0]];
+    for(let i=1;i<=6;i++) bits += (par[i-1]==='0'?EAN_L:EAN_G)[+c[i]];
+    bits+='01010';
+    for(let i=7;i<=12;i++) bits += EAN_R[+c[i]];
+  }else{
+    for(let i=0;i<4;i++) bits += EAN_L[+c[i]];
+    bits+='01010';
+    for(let i=4;i<8;i++) bits += EAN_R[+c[i]];
+  }
+  bits+='101';
+  const q = d13 ? 11 : 7;                 // 左の余白（読み取りに必要）
+  const W = q + bits.length + 7, BAR=26, GUARD=31, H=39;  // 横長すぎず、読み取りに足りる高さ
+  // 両端と中央の「ガードバー」だけ少し長く伸ばすのが標準の見た目
+  const gs = d13 ? [[0,3],[45,50],[92,95]] : [[0,3],[31,36],[64,67]];
+  const isGuard = i => gs.some(g=>i>=g[0] && i<g[1]);
+  let out = `<rect width="${W}" height="${H}" fill="#fff"/>`;
+  for(let i=0;i<bits.length;i++){
+    if(bits[i]!=='1') continue;
+    out += `<rect x="${q+i}" y="1" width="1" height="${isGuard(i)?GUARD:BAR}" fill="#111"/>`;
+  }
+  const txt=(x,ch)=>`<text x="${x}" y="38" font-size="7.6" text-anchor="middle" fill="#111" font-family="monospace">${ch}</text>`;
+  if(d13){
+    out += txt(q-4.5, c[0]);
+    for(let i=1;i<=6;i++)  out += txt(q+3+(i-1)*7+3.5, c[i]);
+    for(let i=7;i<=12;i++) out += txt(q+50+(i-7)*7+3.5, c[i]);
+  }else{
+    for(let i=0;i<4;i++) out += txt(q+3+i*7+3.5, c[i]);
+    for(let i=4;i<8;i++) out += txt(q+36+(i-4)*7+3.5, c[i]);
+  }
+  return `<svg class="bcode" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="JAN ${c}">${out}</svg>`;
+}
+
 /* ============ 登録済み商品の編集 ============ */
 let editingId=null, editImg='';
 function ePreview(){
@@ -1292,6 +1384,10 @@ window.editItem=id=>{
   $('#eDate').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   $('#eQty').value = it.qty==null ? '' : it.qty;
   $('#eRepeatChk').checked = !!it.repeat;
+  // JANは商品に保存済みなので、出すだけ（読み込みは増えない）
+  const jz=$('#eJanShow');
+  if(it.jan){ jz.innerHTML = barcodeSVG(it.jan) || ('JAN '+esc(it.jan)); jz.style.display='flex'; }
+  else jz.style.display='none';
   editImg=thumbOf(it); ePreview(); // 記録 or マスターの現画像を表示
   document.querySelectorAll('#eChips .chip').forEach(c=>c.classList.remove('on'));
   $('#editModal').classList.add('show');
@@ -1483,7 +1579,7 @@ function showFujiRandom(){
   showFuji(FUJI[i].f, FUJI[i].t);
 }
 
-let bmQueue=[], bmKept=[], bmRepeatDone=[], bmTomorrowOK=false, bmCard=null, bmUndoTimer=null;
+let bmQueue=[], bmKept=[], bmRepeatDone=[], bmTomorrowOK=false, bmCard=null, bmUndoTimer=null, bmTotal=0, bmSwiped=false;
 
 // 対象：超過(<0)・今日(0)・明日(1)廃棄の未廃棄アイテム（繰り返し商品も含む）。超過→今日→明日の順
 function bmTargets(){
@@ -1494,7 +1590,7 @@ function bmTargets(){
 }
 function openBuchiaru(){
   if(!getStore()){ openStoreGate(); return; }
-  bmQueue = bmTargets(); bmKept=[]; bmRepeatDone=[]; bmTomorrowOK=false;
+  bmQueue = bmTargets(); bmKept=[]; bmRepeatDone=[]; bmTomorrowOK=false; bmTotal=bmQueue.length; bmSwiped=false;
   $('#bmPrompt').classList.remove('show');
   $('#bmFinish').classList.remove('show');
   $('#bmUndo').classList.remove('show');
@@ -1502,16 +1598,21 @@ function openBuchiaru(){
   if(bmQueue.length===0){ showFuji('normal','今日は何もにゃあずらね'); setTimeout(closeBuchiaru, 2600); return; }
   bmNext();
 }
+// ステージからカードだけ取り除く（スワイプの案内は残しておく）
+function bmClearCards(){
+  $('#bmStage').querySelectorAll('.bcard').forEach(c=>c.remove());
+  const g=$('#bmGuide'); if(g) g.classList.add('hide');
+}
 function closeBuchiaru(){
   $('#bmode').classList.remove('show');
-  $('#bmStage').innerHTML=''; bmCard=null;
+  bmClearCards(); bmCard=null;
   clearTimeout(bmUndoTimer); $('#bmUndo').classList.remove('show');
   goTab('scan');
 }
 // 終了（ぶちゃらなかったものはそのまま残る）→ 繰り返し品の次回日付 → ふじばあ → スキャン画面へ
 function bmFinish(){
   $('#bmPrompt').classList.remove('show');
-  $('#bmStage').innerHTML=''; bmCard=null;
+  bmClearCards(); bmCard=null;
   clearTimeout(bmUndoTimer); $('#bmUndo').classList.remove('show');
   // ぶちゃった繰り返し商品は、最後にまとめて次の廃棄日を入力してもらう
   if(bmRepeatDone.length>0){
@@ -1541,10 +1642,12 @@ function bmPrompt(q, btns){
 }
 // 次のカードへ。日付の切り替わり・終了時は確認を出す
 function bmNext(){
-  $('#bmStage').innerHTML=''; bmCard=null;
+  bmClearCards(); bmCard=null;
   // すでに他端末で廃棄済み/削除されたものは飛ばす
   bmQueue = bmQueue.filter(q=>{ const cur=DB.items().find(i=>i.id===q.id); return cur && !cur.discarded; });
-  $('#bmCount').textContent = 'のこり '+(bmQueue.length+bmKept.length)+'件';
+  const left = bmQueue.length + bmKept.length;
+  $('#bmCount').textContent = 'のこり '+left+'件';
+  $('#bmBar').style.width = bmTotal ? Math.round((bmTotal-left)/bmTotal*100)+'%' : '0%';
 
   if(bmQueue.length===0){
     if(bmKept.length>0){
@@ -1566,41 +1669,68 @@ function bmNext(){
   }
   bmRender(it);
 }
-function bmRender(it){
+const NOIMG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M21 15l-5-5L5 21"/></svg>';
+function bmCardEl(it){
   const d = discardDiff(it.expiry);
   const th = thumbOf(it);
+  const cls = d<0?'over':(d===0?'today':'tomo');
+  const label = d<0? (-d)+'日超過' : (d===0?'今日廃棄':'明日廃棄');
   const el=document.createElement('div');
   el.className='bcard';
   el.innerHTML =
-    (th? `<img class="bimg" src="${th}" alt="">` : `<div class="bnoimg">画像なし</div>`) +
+    `<div class="baccent ${cls}"></div><div class="bpad">` +
+    (th? `<img class="bimg" src="${th}" alt="">`
+       : `<div class="bnoimg">${NOIMG}<span>画像なし</span></div>`) +
     `<div class="bname">${esc(it.name)}</div>` +
-    `<div class="bday ${d<0?'over':(d===0?'today':'tomo')}">${d<0? (-d)+'日超過' : (d===0?'今日廃棄':'明日廃棄')}</div>` +
-    (it.repeat? `<div class="bday rep">繰り返し</div>` : '') +
-    `<div class="bqty">${it.qty!=null? it.qty+'点' : '—'}</div>`;
+    (it.jan? `<div class="bjan">${barcodeSVG(it.jan) || ('JAN '+esc(it.jan))}</div>` : '') +
+    `<div class="btags"><span class="bday ${cls}">${label}</span>` +
+      (it.repeat? `<span class="bday rep">繰り返し</span>` : '') + `</div>` +
+    `<div class="bqty">${it.qty!=null? it.qty+'点' : '—'}</div></div>` +
+    `<div class="bstamp up">ぶちゃる</div><div class="bstamp down">とっとく</div>`;
+  return el;
+}
+function bmRender(it){
   const stage=$('#bmStage');
-  stage.innerHTML='';
+  bmClearCards();
+  // 次の1枚を後ろに薄く重ねる（あと何枚あるかが感覚で分かる）
+  const nx = bmQueue[1];
+  if(nx){ const back=bmCardEl(nx); back.classList.add('behind'); stage.appendChild(back); }
+  const el = bmCardEl(it);
   stage.appendChild(el);
-  const hint=document.createElement('div');
-  hint.className='bhint'; hint.textContent='上へスワイプ＝ぶちゃる／下へ＝とっとく';
-  stage.appendChild(hint);
+  const g=$('#bmGuide'); if(g) g.classList.toggle('hide', bmSwiped);
   bmCard=el;
   bmBindSwipe(el, it);
 }
 // スワイプ操作（上＝ぶちゃる／下＝とっとく）
 function bmBindSwipe(el, it){
-  let sy=0, dy=0, active=false;
+  let sy=0, dy=0, active=false, crossed=0;
   const TH=90; // 確定に必要な距離
   const zoneT=$('#bmZoneTop'), zoneB=$('#bmZoneBottom');
-  const reset=()=>{ zoneT.classList.remove('hot'); zoneB.classList.remove('hot'); };
+  const stampU=el.querySelector('.bstamp.up'), stampD=el.querySelector('.bstamp.down');
+  const guide=$('#bmGuide');
+  const reset=()=>{
+    zoneT.classList.remove('hot'); zoneB.classList.remove('hot');
+    stampU.style.opacity=0; stampD.style.opacity=0;
+    if(guide) guide.classList.toggle('hide', bmSwiped);
+  };
   el.addEventListener('pointerdown', e=>{
-    active=true; sy=e.clientY; dy=0; el.setPointerCapture(e.pointerId); el.classList.remove('spring');
+    active=true; sy=e.clientY; dy=0; crossed=0; el.setPointerCapture(e.pointerId);
+    el.classList.remove('spring');
+    if(guide) guide.classList.add('hide');
   });
   el.addEventListener('pointermove', e=>{
     if(!active) return;
     dy = e.clientY - sy;
-    el.style.transform = `translateY(${dy}px) rotate(${dy*0.012}deg)`;
-    zoneT.classList.toggle('hot', dy < -TH);
-    zoneB.classList.toggle('hot', dy >  TH);
+    const p = Math.min(1, Math.abs(dy)/TH);
+    el.style.transform = `translateY(${dy}px) rotate(${dy*0.014}deg) scale(${1-0.04*p})`;
+    stampU.style.opacity = dy<0 ? p : 0;
+    stampD.style.opacity = dy>0 ? p : 0;
+    const hotU = dy < -TH, hotD = dy > TH;
+    zoneT.classList.toggle('hot', hotU);
+    zoneB.classList.toggle('hot', hotD);
+    // しきい値を越えた瞬間だけ短く振動（指を離していいことが手で分かる）
+    const c = hotU ? -1 : hotD ? 1 : 0;
+    if(c!==crossed){ if(c!==0 && navigator.vibrate) navigator.vibrate(12); crossed=c; }
   });
   const end=()=>{
     if(!active) return; active=false; reset();
@@ -1615,6 +1745,7 @@ function bmBindSwipe(el, it){
   zoneB.onclick=()=>{ if(bmCard===el){ el.classList.add('gone-down'); setTimeout(()=>bmKeep(it),200); } };
 }
 function bmDiscard(it){
+  bmSwiped=true;
   bmQueue = bmQueue.filter(q=>q.id!==it.id);
   if(it.repeat){
     // 繰り返し商品はアーカイブせず、最後に次の廃棄日を入力してもらう
@@ -1634,6 +1765,7 @@ function bmDiscard(it){
   bmNext();
 }
 function bmKeep(it){
+  bmSwiped=true;
   bmQueue = bmQueue.filter(q=>q.id!==it.id);
   if(!bmKept.some(k=>k.id===it.id)) bmKept.push(it);
   bmNext();

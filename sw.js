@@ -1,6 +1,23 @@
-// ネットワーク優先のサービスワーカー
-// オンライン時は常に最新を取得し、オフライン時のみキャッシュを使う
+// ぶちゃる Service Worker
+//
+// 【この版での変更（2026-09-08）】旧版は「必ず通信を待つ」作りだったため、
+// 電波が弱い（繋がってはいるがデータが流れない）状態で画面が真っ白になった。
+// 完全に圏外なら即座に失敗してキャッシュが使われるが、弱電波では失敗もせず待ち続けるため。
+//
+//  1. 通信の待ち時間に上限（NET_TIMEOUT_MS）を設けた。
+//     間に合わなければキャッシュを返す。通信自体は裏で続行し、キャッシュを更新する。
+//  2. 初回インストールを1ファイルずつに変えた。
+//     旧版は addAll で、1つでも取得に失敗するとオフライン機能が丸ごと入らなかった。
+//  3. 同一オリジンのファイルだけを扱うようにした。
+//     Firestore など外部との通信には一切触れない（再送処理を邪魔しないため）。
+//
+// キャッシュ名は据え置き。既存端末の温まったキャッシュをそのまま活かすため。
+
 const CACHE = 'fm-v29';
+
+// 通信をこの時間だけ待つ。超えたらキャッシュを返す（通信は裏で続く）
+const NET_TIMEOUT_MS = 3000;
+
 const ASSETS = [
   './', './index.html', './terms.html', './manifest.json',
   './fuji-normal.png', './fuji-surprise.png', './fuji-scold.png', './fuji-sleepy.png',
@@ -12,24 +29,61 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    // 1つずつ入れる。1個失敗しても残りは入る（addAll は全部まとめて失敗する）
+    await Promise.all(ASSETS.map(url => cache.add(url).catch(() => {})));
+    await self.skipWaiting();
+  })());
 });
+
 self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
+
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-        return res;
-      })
-      .catch(() => caches.match(e.request))
-  );
+  const req = e.request;
+  if (req.method !== 'GET') return;
+
+  // 外部（Firestore・Google認証など）には触らない。素通しする
+  let url;
+  try { url = new URL(req.url); } catch (_) { return; }
+  if (url.origin !== self.location.origin) return;
+
+  // 通信はすぐ始める。成功したらキャッシュを更新する
+  const network = fetch(req).then(res => {
+    if (res && res.ok) {
+      const copy = res.clone();
+      caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+    }
+    return res;
+  }).catch(() => null);
+
+  // 画面を返した後も、裏の通信とキャッシュ更新を最後までやらせる
+  e.waitUntil(network);
+
+  e.respondWith((async () => {
+    const cached = await caches.match(req);
+
+    if (!cached) {
+      // キャッシュが無い場合は通信を待つしかない
+      const res = await network;
+      if (res) return res;
+      // 画面の表示要求なら、せめてトップ画面を出す（真っ白を避ける）
+      if (req.mode === 'navigate') {
+        const shell = await caches.match('./index.html');
+        if (shell) return shell;
+      }
+      return new Response('', { status: 504, statusText: 'offline' });
+    }
+
+    // キャッシュがある場合：通信を少しだけ待ち、間に合わなければキャッシュを返す
+    const timeout = new Promise(r => setTimeout(() => r(null), NET_TIMEOUT_MS));
+    const fresh = await Promise.race([network, timeout]);
+    return (fresh && fresh.ok) ? fresh : cached;
+  })());
 });

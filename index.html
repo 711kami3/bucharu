@@ -775,10 +775,12 @@ async function ownerCreateStore(sid){
   const u=fbAuth.currentUser;
   if(!u || u.isAnonymous){ showToast('先にGoogleでログインしてください'); return; }
   try{
+    // merge:true を外す。既存の店舗に対して locked:false を書き戻さないため
+    // （施錠していたのに、この画面を1回押しただけで解錠に戻る事故を防ぐ）
     await fbDb.collection('stores').doc(sid).set({
       ownerUid:u.uid, ownerEmail:(u.email||''), name:sid, locked:false,
       createdAt:new Date().toISOString()
-    }, {merge:true});
+    });
     showToast('店舗を作成しました'); startSync();
     $('#storeGate').classList.remove('show'); refreshOwnerPanel();
   }catch(e){
@@ -952,7 +954,7 @@ function checkAlerts(){
   let html = '⚠️ ';
   if(over.length) html += `<b>期限超過 ${over.reduce((a,i)=>a+qtyOf(i),0)}点</b> `;
   if(near.length) html += `／ まもなく ${near.reduce((a,i)=>a+qtyOf(i),0)}点`;
-  html += `<br><span class="muted">`+ soon.slice(0,3).map(i=>`${i.name}(${statusLabel(i.expiry)})`).join('・') + (soon.length>3?' 他':'') +`</span>`;
+  html += `<br><span class="muted">`+ soon.slice(0,3).map(i=>`${esc(i.name)}(${statusLabel(i.expiry)})`).join('・') + (soon.length>3?' 他':'') +`</span>`;
   banner.innerHTML = html; banner.dataset.has='1'; applyBannerVisibility();
   // ブラウザ通知（許可時のみ・重複防止）
   if('Notification' in window && Notification.permission==='granted'){
@@ -1242,21 +1244,21 @@ document.querySelectorAll('#listSeg button').forEach(b=>{
   b.onclick=()=>{ document.querySelectorAll('#listSeg button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); listFilter=b.dataset.f; renderList(); };
 });
 // サムネ取得：記録の画像→無ければ同JANのマスター画像（後方互換：古い記録の画像もそのまま表示）
-function thumbOf(i){ return i.img || (i.jan && MASTER[i.jan] && MASTER[i.jan].img) || ''; }
+function thumbOf(i){ return safeImg(i.img) || (i.jan && MASTER[i.jan] && safeImg(MASTER[i.jan].img)) || ''; }
 function itemHTML(i){
   const st = i.discarded?'ok':statusOf(i.expiry);
   const th = thumbOf(i);
   return `<div class="item ${i.discarded?'':st}">
-      ${th?`<img class="thumb" src="${th}" alt="">`:''}
-      <div class="info" onclick="editItem('${i.id}')" title="タップで編集">
+      ${th?`<img class="thumb" src="${esc(th)}" alt="">`:''}
+      <div class="info" onclick="editItem('${esc(i.id)}')" title="タップで編集">
         <div class="name">${esc(i.name)}</div>
         <div class="meta">期限 ${fmtDate(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span>${i.repeat?'<span class="reptag">繰り返し</span>':''}</div>
       </div>
       <div class="qty">${i.qty!=null?`${i.qty}点`:'—'}</div>
       ${i.discarded
-        ? `<button class="iconbtn" onclick="undiscard('${i.id}')" aria-label="戻す">${IC.undo}<span class="ib-label">戻す</span></button>`
-        : `<button class="iconbtn ok" onclick="discard('${i.id}')" aria-label="廃棄">${IC.check}<span class="ib-label">廃棄</span></button>`}
-      <button class="iconbtn danger" onclick="delItem('${i.id}')" aria-label="削除">${IC.trash}<span class="ib-label">削除</span></button>
+        ? `<button class="iconbtn" onclick="undiscard('${esc(i.id)}')" aria-label="戻す">${IC.undo}<span class="ib-label">戻す</span></button>`
+        : `<button class="iconbtn ok" onclick="discard('${esc(i.id)}')" aria-label="廃棄">${IC.check}<span class="ib-label">廃棄</span></button>`}
+      <button class="iconbtn danger" onclick="delItem('${esc(i.id)}')" aria-label="削除">${IC.trash}<span class="ib-label">削除</span></button>
     </div>`;
 }
 function renderList(){
@@ -1293,7 +1295,11 @@ function renderList(){
   }).join('');
 }
 window.toggleMonth=key=>{ if(collapsedMonths.has(key)) collapsedMonths.delete(key); else collapsedMonths.add(key); renderList(); };
-function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// 画像は「data:image/... の形をした文字列」だけを通す。
+// 他人が書き込んだ文字列をそのまま src に入れると、そこからコードを実行されるため。
+function safeImg(s){ s=String(s||'');
+  return /^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]*$/.test(s) ? s : ''; }
 window.discard=id=>{
   const it=ITEMS.find(i=>i.id===id);
   if(it && it.repeat){ openNextDate(id); return; } // 繰り返し商品は「次の廃棄日」を入力して継続
@@ -1499,7 +1505,7 @@ window.showDay=d=>{
   $('#sheetTitle').textContent=`${calM+1}月${d}日 の廃棄予定（${items.reduce((a,i)=>a+qtyOf(i),0)}点）`;
   $('#sheetBody').innerHTML = items.length? items.map(i=>`
     <div class="item ${statusOf(i.expiry)}">
-      ${thumbOf(i)?`<img class="thumb" src="${thumbOf(i)}" alt="">`:''}
+      ${thumbOf(i)?`<img class="thumb" src="${esc(thumbOf(i))}" alt="">`:''}
       <div class="info"><div class="name">${esc(i.name)}</div><div class="meta">期限 ${fmtDate(i.expiry)}${i.repeat?'<span class="reptag">繰り返し</span>':''}</div></div>
       <div class="qty">${i.qty!=null?`${i.qty}点`:'—'}</div>
     </div>`).join('') : '<div class="empty">予定はありません</div>';
@@ -1679,7 +1685,7 @@ function bmCardEl(it){
   el.className='bcard';
   el.innerHTML =
     `<div class="baccent ${cls}"></div><div class="bpad">` +
-    (th? `<img class="bimg" src="${th}" alt="">`
+    (th? `<img class="bimg" src="${esc(th)}" alt="">`
        : `<div class="bnoimg">${NOIMG}<span>画像なし</span></div>`) +
     `<div class="bname">${esc(it.name)}</div>` +
     (it.jan? `<div class="bjan">${barcodeSVG(it.jan) || ('JAN '+esc(it.jan))}</div>` : '') +

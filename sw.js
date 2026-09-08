@@ -11,9 +11,12 @@
 //  3. 同一オリジンのファイルだけを扱うようにした。
 //     Firestore など外部との通信には一切触れない（再送処理を邪魔しないため）。
 //
-// キャッシュ名は据え置き。既存端末の温まったキャッシュをそのまま活かすため。
+// 【2026-09-09 追記】キャッシュ名を fm-v29 → fm-v30 に上げた。
+// index.html のセキュリティ修正を各端末に確実に届けるため。
+// ★以後、index.html を更新したら必ずこの番号を上げること。
+// 番号を上げないと、端末は古い版を使い続ける（実際にそうなることを確認済み）。
 
-const CACHE = 'fm-v29';
+const CACHE = 'fm-v30';   // ★更新時は必ず番号を上げる（上げないと古い版が残り続ける）
 
 // 通信をこの時間だけ待つ。超えたらキャッシュを返す（通信は裏で続く）
 const NET_TIMEOUT_MS = 3000;
@@ -32,7 +35,14 @@ self.addEventListener('install', e => {
   e.waitUntil((async () => {
     const cache = await caches.open(CACHE);
     // 1つずつ入れる。1個失敗しても残りは入る（addAll は全部まとめて失敗する）
-    await Promise.all(ASSETS.map(url => cache.add(url).catch(() => {})));
+    // cache:'reload' を付けて、ブラウザ自身のキャッシュを迂回し必ずサーバーから取り直す。
+    // これが無いと、更新したはずのファイルが古いまま入ってしまう。
+    await Promise.all(ASSETS.map(async url => {
+      try {
+        const res = await fetch(url, { cache: 'reload' });
+        if (res && res.ok) await cache.put(url, res);
+      } catch (e) { /* 1つ失敗しても他は入れる */ }
+    }));
     await self.skipWaiting();
   })());
 });

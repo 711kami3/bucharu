@@ -149,18 +149,26 @@
        │ 写真  ├─────────────┼──────────┤
        │       │ 期限･状態     │ メモ      │
        └───────┴─────────────┴──────────┘ */
-  .item{display:grid; grid-template-columns:auto minmax(0,1fr) clamp(166px,44%,280px);
-    grid-template-rows:auto 46px;   /* 2行目はメモ2行ぶんを常に確保＝全カード同じ高さ */
-    grid-template-areas:"thumb name acts" "thumb meta memo";
-    align-items:center; column-gap:8px; row-gap:3px;
+  /* 1段目に商品名を全幅で。2段目に写真／期限／操作、3段目にメモ。
+     行の高さを決め打ちにして、写真やメモの有無にかかわらず全カード同じ高さにする
+       ┌──────────────────────────────────┐
+       │ 商品名（全幅・入りきらなければ…）      │
+       │ ┌────┐ あと3日   個数 値下 廃棄 削除 │
+       │ │写真│ 9/12(土)  ─────────────── │
+       │ └────┘           メモ              │
+       └──────────────────────────────────┘ */
+  .item{display:grid; grid-template-columns:auto auto clamp(166px,44%,280px);
+    grid-template-rows:auto auto 26px;
+    grid-template-areas:"name name name" "thumb meta acts" "thumb memo memo";
+    align-items:center; column-gap:8px; row-gap:2px;
     background:#fff; border:1px solid var(--line); border-left-width:6px;
-    border-radius:12px; padding:10px 12px; margin-bottom:10px;}
+    border-radius:12px; padding:9px 12px; margin-bottom:10px;}
   .item.ok{border-left-color:var(--green);}
   .item.soon{border-left-color:var(--orange); background:#fffaf2;}
   .item.over{border-left-color:var(--red); background:#fdf1f0;}
 
   /* 写真：無い商品も同じ枠を出して左端を揃える */
-  .item .ph{grid-area:thumb; position:relative; width:52px; height:52px; cursor:pointer;}
+  .item .ph{grid-area:thumb; position:relative; width:58px; height:58px; cursor:pointer;}
   .item .ph .thumb{width:100%; height:100%; object-fit:cover; border-radius:10px; background:#eef0f3; display:block;}
   .item .ph .none{width:100%; height:100%; border-radius:10px; background:#eef1f5;
     border:1px dashed #d3d8e0; display:flex; align-items:center; justify-content:center; color:#b9c0ca;}
@@ -170,10 +178,10 @@
     background:var(--green); color:#fff; border:2px solid #fff; display:flex; align-items:center; justify-content:center;}
   .item .ph .rep svg{width:11px; height:11px;}
 
-  .item .name{grid-area:name; font-weight:700; font-size:15px; line-height:1.35; cursor:pointer;
-    overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;}
-  .item .meta{grid-area:meta; display:flex; align-items:center; flex-wrap:wrap; gap:2px 6px; min-width:0;
-    font-size:12.5px; color:var(--gray); white-space:nowrap; overflow:hidden; cursor:pointer;}
+  .item .name{grid-area:name; font-weight:700; font-size:16px; line-height:1.35; cursor:pointer;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:2px;}
+  .item .meta{grid-area:meta; display:flex; flex-direction:column; align-items:flex-start; gap:3px;
+    font-size:12.5px; color:var(--gray); white-space:nowrap; cursor:pointer;}
   .item .badge{font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; flex:0 0 auto;}
   .badge.ok{background:#e3f5ea; color:var(--green);}
   .badge.soon{background:#ffe9cc; color:var(--orange);}
@@ -185,13 +193,12 @@
   /* メモ：操作アイコンの下の空きに収める。カードの高さは伸びない */
   /* width:0 + min-width:100% で「列の幅はアイコン側だけで決まる」ようにする。
      こうしないと長いメモが列を広げて商品名が潰れる */
-  .item .memo{grid-area:memo; width:0; min-width:100%; box-sizing:border-box;
+  .item .memo{grid-area:memo; min-width:0; box-sizing:border-box;
     display:flex; align-items:center; gap:5px; cursor:pointer;
-    background:#fff8e8; border:1px solid #f0dcb4; border-radius:8px; padding:5px 8px;
-    font-size:12px; color:#8a6a20; line-height:1.45; align-items:flex-start;}
-  .item .memo svg{width:14px; height:14px; flex:0 0 auto; margin-top:1px;}
-  .item .memo span{min-width:0; overflow:hidden; white-space:normal;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;}
+    background:#fff8e8; border:1px solid #f0dcb4; border-radius:8px; padding:3px 8px;
+    font-size:12px; color:#8a6a20; line-height:1.5; align-items:center;}
+  .item .memo svg{width:14px; height:14px; flex:0 0 auto;}
+  .item .memo span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
   .iconbtn{background:none; border:none; padding:5px 6px; cursor:pointer; color:var(--gray); border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; gap:2px;}
   .iconbtn svg{width:23px; height:23px; display:block;}
@@ -1343,11 +1350,11 @@ function itemHTML(i){
   const th = thumbOf(i);
   const open = `onclick="editItem('${esc(i.id)}')"`;
   return `<div class="item ${i.discarded?'':st}">
+      <div class="name" ${open} title="タップで編集">${esc(i.name)}</div>
       <div class="ph" ${open} title="タップで編集">
         ${th?`<img class="thumb" src="${esc(th)}" alt="">`:`<div class="none">${IC.noimg}</div>`}
         ${i.repeat?`<span class="rep" title="繰り返し商品">${IC.repeat}</span>`:''}
       </div>
-      <div class="name" ${open} title="タップで編集">${esc(i.name)}</div>
       <div class="meta" ${open}>
         <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span>
         <span>${fmtDate(i.expiry)}</span>

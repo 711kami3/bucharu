@@ -97,7 +97,6 @@
   .chip.on{background:var(--green); color:#fff;}
   .imgrow{display:flex; align-items:center; gap:10px; margin-top:6px;}
   .imgrow img{width:56px; height:56px; object-fit:cover; border-radius:10px; border:1px solid var(--line);}
-  .item .thumb{width:44px; height:44px; object-fit:cover; border-radius:8px; flex:0 0 auto; background:#eef0f3; cursor:pointer;}
   #imgModal{align-items:center; justify-content:center; padding:24px;}
   #imgModal img{max-width:100%; max-height:85vh; border-radius:12px; box-shadow:0 8px 40px rgba(0,0,0,.5);}
 
@@ -144,21 +143,57 @@
   .muted{color:var(--gray); font-size:13px;}
 
   /* 一覧アイテム */
-  .item{display:flex; flex-wrap:wrap; align-items:center; gap:12px; background:#fff; border:1px solid var(--line); border-left-width:6px; border-radius:12px; padding:12px; margin-bottom:10px;}
+  /* 2行の格子。写真の有無やメモの有無にかかわらず、どのカードも同じ高さになる
+       ┌───────┬─────────────┬──────────┐
+       │       │ 商品名        │ 個数･操作 │
+       │ 写真  ├─────────────┼──────────┤
+       │       │ 期限･状態     │ メモ      │
+       └───────┴─────────────┴──────────┘ */
+  .item{display:grid; grid-template-columns:auto minmax(0,1fr) auto;
+    grid-template-areas:"thumb name acts" "thumb meta memo";
+    align-items:center; column-gap:10px; row-gap:3px;
+    background:#fff; border:1px solid var(--line); border-left-width:6px;
+    border-radius:12px; padding:10px 12px; margin-bottom:10px;}
   .item.ok{border-left-color:var(--green);}
   .item.soon{border-left-color:var(--orange); background:#fffaf2;}
   .item.over{border-left-color:var(--red); background:#fdf1f0;}
-  .item .info{flex:1; min-width:0; cursor:pointer;}
-  .item .info .name{font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .item .info .meta{font-size:13px; color:var(--gray); margin-top:2px;}
-  .item .badge{font-size:12px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap;}
+
+  /* 写真：無い商品も同じ枠を出して左端を揃える */
+  .item .ph{grid-area:thumb; position:relative; width:54px; height:54px; cursor:pointer;}
+  .item .ph .thumb{width:100%; height:100%; object-fit:cover; border-radius:10px; background:#eef0f3; display:block;}
+  .item .ph .none{width:100%; height:100%; border-radius:10px; background:#eef1f5;
+    border:1px dashed #d3d8e0; display:flex; align-items:center; justify-content:center; color:#b9c0ca;}
+  .item .ph .none svg{width:22px; height:22px;}
+  /* 繰り返し商品は写真の角に印を付ける（1行の情報量を増やさない） */
+  .item .ph .rep{position:absolute; right:-3px; bottom:-3px; width:20px; height:20px; border-radius:50%;
+    background:var(--green); color:#fff; border:2px solid #fff; display:flex; align-items:center; justify-content:center;}
+  .item .ph .rep svg{width:11px; height:11px;}
+
+  .item .name{grid-area:name; font-weight:700; font-size:15px; line-height:1.35;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;}
+  .item .meta{grid-area:meta; display:flex; align-items:center; gap:6px; min-width:0;
+    font-size:12.5px; color:var(--gray); white-space:nowrap; overflow:hidden; cursor:pointer;}
+  .item .badge{font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; flex:0 0 auto;}
   .badge.ok{background:#e3f5ea; color:var(--green);}
   .badge.soon{background:#ffe9cc; color:var(--orange);}
   .badge.over{background:#fbdedb; color:var(--red);}
-  .item .qty{font-size:14px; font-weight:700; min-width:36px; text-align:right;}
-  .iconbtn{background:none; border:none; padding:6px 5px; cursor:pointer; color:var(--gray); border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; gap:2px;}
-  .iconbtn svg{width:20px; height:20px; display:block;}
-  .iconbtn .ib-label{font-size:10px; font-weight:700; line-height:1;}
+
+  .item .acts{grid-area:acts; display:flex; align-items:center; gap:1px; justify-self:end;}
+  .item .qty{font-size:13.5px; font-weight:700; min-width:30px; text-align:right; margin-right:3px;}
+
+  /* メモ：操作アイコンの下の空きに収める。カードの高さは伸びない */
+  /* width:0 + min-width:100% で「列の幅はアイコン側だけで決まる」ようにする。
+     こうしないと長いメモが列を広げて商品名が潰れる */
+  .item .memo{grid-area:memo; width:0; min-width:100%; box-sizing:border-box;
+    display:flex; align-items:center; gap:5px; cursor:pointer;
+    background:#fff8e8; border:1px solid #f0dcb4; border-radius:7px; padding:3px 8px;
+    font-size:11px; color:#8a6a20; line-height:1.4;}
+  .item .memo svg{width:13px; height:13px; flex:0 0 auto;}
+  .item .memo span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+  .iconbtn{background:none; border:none; padding:6px 4px; cursor:pointer; color:var(--gray); border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; gap:2px;}
+  .iconbtn svg{width:19px; height:19px; display:block;}
+  .iconbtn .ib-label{font-size:9.5px; font-weight:700; line-height:1; letter-spacing:-.02em;}
   .iconbtn.ok{color:var(--green);}
   .iconbtn.danger{color:var(--red);}
   .iconbtn.warn{color:var(--orange);}
@@ -177,14 +212,6 @@
   .switch input:checked + .slider{background:var(--green);}
   .switch input:checked + .slider:before{transform:translateX(20px);}
   .reptag{display:inline-block; margin-left:6px; font-size:11px; font-weight:700; color:var(--green); background:#e3f5ea; border-radius:20px; padding:2px 8px; vertical-align:middle;}
-  .mdtag{display:inline-block; margin-left:6px; font-size:11px; font-weight:700; color:var(--orange); background:#ffe9cc; border-radius:20px; padding:2px 8px; vertical-align:middle;}
-  /* メモがある商品は、アイコンの下に横いっぱいで出す（見落とし防止） */
-  .memoline{flex:0 0 100%; display:flex; align-items:center; gap:7px; margin-top:2px;
-    background:#fff8e8; border:1px solid #f0dcb4; border-radius:9px; padding:8px 10px;
-    font-size:12.5px; color:#7a5a12; min-width:0;}
-  .memoline svg{width:15px; height:15px; flex:0 0 auto;}
-  .memoline b{flex:0 0 auto; font-weight:700;}
-  .memoline span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   /* 値下げの「未／済」 */
   .mdseg{margin:4px 0 0;}
   .seg button.on{background:#fff; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.08);}
@@ -277,6 +304,11 @@
   .bcard .bday.over{background:var(--red); color:#fff;}
   .bcard .bday.rep{background:#e7f4ec; color:var(--green);}
   .bcard .bqty{margin-top:12px; font-size:16px; font-weight:700;}
+  .bcard .bmemo{display:flex; align-items:flex-start; gap:7px; margin-top:12px; text-align:left;
+    background:#fff8e8; border:1px solid #f0dcb4; border-radius:10px; padding:8px 10px;
+    font-size:12.5px; color:#7a5a12; line-height:1.5;}
+  .bcard .bmemo svg{width:15px; height:15px; flex:0 0 auto; margin-top:1px;}
+  .bcard .bmemo span{min-width:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
   /* 次の商品を後ろに薄く重ねる（あと何枚あるかが見た目で分かる） */
   .bcard.behind{position:absolute; left:50%; top:50%; z-index:0; pointer-events:none; opacity:.5;
     transform:translate(-50%,-50%) translateY(18px) scale(.93); filter:saturate(.8);
@@ -704,7 +736,9 @@ const IC = {
   caret:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
   tag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.6" cy="7.6" r="1.3"/></svg>',
   tagOn:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.6" cy="7.6" r="1.5" fill="#fff" stroke="none"/></svg>',
-  memo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v13l-5 5H5z"/><path d="M19 16h-5v5"/><path d="M9 8h6M9 12h4"/></svg>'
+  memo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v13l-5 5H5z"/><path d="M19 16h-5v5"/><path d="M9 8h6M9 12h4"/></svg>',
+  noimg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M21 15l-5-5L5 21"/></svg>',
+  repeat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>'
 };
 
 function startSync(){
@@ -1305,19 +1339,26 @@ function thumbOf(i){ return safeImg(i.img) || (i.jan && MASTER[i.jan] && safeImg
 function itemHTML(i){
   const st = i.discarded?'ok':statusOf(i.expiry);
   const th = thumbOf(i);
+  const open = `onclick="editItem('${esc(i.id)}')"`;
   return `<div class="item ${i.discarded?'':st}">
-      ${th?`<img class="thumb" src="${esc(th)}" alt="">`:''}
-      <div class="info" onclick="editItem('${esc(i.id)}')" title="タップで編集">
-        <div class="name">${esc(i.name)}</div>
-        <div class="meta">期限 ${fmtDate(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span>${i.markedDown?'<span class="mdtag">値下げ済</span>':''}${i.repeat?'<span class="reptag">繰り返し</span>':''}</div>
+      <div class="ph" ${open} title="タップで編集">
+        ${th?`<img class="thumb" src="${esc(th)}" alt="">`:`<div class="none">${IC.noimg}</div>`}
+        ${i.repeat?`<span class="rep" title="繰り返し商品">${IC.repeat}</span>`:''}
       </div>
-      <div class="qty">${i.qty!=null?`${i.qty}点`:'—'}</div>
-      <button class="iconbtn${i.markedDown?' warn':''}" onclick="toggleMd('${esc(i.id)}')" aria-label="値下げ">${i.markedDown?IC.tagOn:IC.tag}<span class="ib-label">値下げ</span></button>
-      ${i.discarded
-        ? `<button class="iconbtn" onclick="undiscard('${esc(i.id)}')" aria-label="戻す">${IC.undo}<span class="ib-label">戻す</span></button>`
-        : `<button class="iconbtn ok" onclick="discard('${esc(i.id)}')" aria-label="廃棄">${IC.check}<span class="ib-label">廃棄</span></button>`}
-      <button class="iconbtn danger" onclick="delItem('${esc(i.id)}')" aria-label="削除">${IC.trash}<span class="ib-label">削除</span></button>
-      ${i.memo?`<div class="memoline">${IC.memo}<b>メモ有り</b><span>${esc(i.memo)}</span></div>`:''}
+      <div class="name" ${open} title="タップで編集">${esc(i.name)}</div>
+      <div class="meta" ${open}>
+        <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span>
+        <span>${fmtDate(i.expiry)}</span>
+      </div>
+      <div class="acts">
+        <span class="qty">${i.qty!=null?`${i.qty}点`:'—'}</span>
+        <button class="iconbtn${i.markedDown?' warn':''}" onclick="toggleMd('${esc(i.id)}')" aria-label="値下げ">${i.markedDown?IC.tagOn:IC.tag}<span class="ib-label">${i.markedDown?'値下済':'値下げ'}</span></button>
+        ${i.discarded
+          ? `<button class="iconbtn" onclick="undiscard('${esc(i.id)}')" aria-label="戻す">${IC.undo}<span class="ib-label">戻す</span></button>`
+          : `<button class="iconbtn ok" onclick="discard('${esc(i.id)}')" aria-label="廃棄">${IC.check}<span class="ib-label">廃棄</span></button>`}
+        <button class="iconbtn danger" onclick="delItem('${esc(i.id)}')" aria-label="削除">${IC.trash}<span class="ib-label">削除</span></button>
+      </div>
+      ${i.memo?`<div class="memo" ${open} title="${esc(i.memo)}">${IC.memo}<span>${esc(i.memo)}</span></div>`:''}
     </div>`;
 }
 function renderList(){
@@ -1761,7 +1802,8 @@ function bmCardEl(it){
     (it.jan? `<div class="bjan">${barcodeSVG(it.jan) || ('JAN '+esc(it.jan))}</div>` : '') +
     `<div class="btags"><span class="bday ${cls}">${label}</span>` +
       (it.repeat? `<span class="bday rep">繰り返し</span>` : '') + `</div>` +
-    `<div class="bqty">${it.qty!=null? it.qty+'点' : '—'}</div></div>` +
+    `<div class="bqty">${it.qty!=null? it.qty+'点' : '—'}</div>` +
+    (it.memo? `<div class="bmemo">${IC.memo}<span>${esc(it.memo)}</span></div>` : '') + `</div>` +
     `<div class="bstamp up">ぶちゃる</div><div class="bstamp down">とっとく</div>`;
   return el;
 }

@@ -116,6 +116,8 @@
   #scanStep2 .janShow{padding:7px 12px;}
   #scanStep2 #masterNote, #editModal #eMasterNote{margin-top:2px;}
   #scanStep2 .repeatToggle, #editModal .repeatToggle{padding:9px 10px; margin-top:8px;}
+  #scanStep2 .mdseg, #editModal .mdseg{padding:3px; margin-top:4px;}
+  #scanStep2 .mdseg button, #editModal .mdseg button{padding:8px 4px;}
   #scanStep2 .chip, #editModal .chip{padding:7px 11px; font-size:13px;}
   #scanStep2 .chips, #editModal .chips{gap:6px; flex-wrap:nowrap; margin-top:4px;}
   #scanStep2 .imgrow, #editModal .imgrow{margin-top:4px;}
@@ -142,7 +144,7 @@
   .muted{color:var(--gray); font-size:13px;}
 
   /* 一覧アイテム */
-  .item{display:flex; align-items:center; gap:12px; background:#fff; border:1px solid var(--line); border-left-width:6px; border-radius:12px; padding:12px; margin-bottom:10px;}
+  .item{display:flex; flex-wrap:wrap; align-items:center; gap:12px; background:#fff; border:1px solid var(--line); border-left-width:6px; border-radius:12px; padding:12px; margin-bottom:10px;}
   .item.ok{border-left-color:var(--green);}
   .item.soon{border-left-color:var(--orange); background:#fffaf2;}
   .item.over{border-left-color:var(--red); background:#fdf1f0;}
@@ -154,11 +156,12 @@
   .badge.soon{background:#ffe9cc; color:var(--orange);}
   .badge.over{background:#fbdedb; color:var(--red);}
   .item .qty{font-size:14px; font-weight:700; min-width:36px; text-align:right;}
-  .iconbtn{background:none; border:none; padding:6px 8px; cursor:pointer; color:var(--gray); border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; gap:2px;}
+  .iconbtn{background:none; border:none; padding:6px 5px; cursor:pointer; color:var(--gray); border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; gap:2px;}
   .iconbtn svg{width:20px; height:20px; display:block;}
   .iconbtn .ib-label{font-size:10px; font-weight:700; line-height:1;}
   .iconbtn.ok{color:var(--green);}
   .iconbtn.danger{color:var(--red);}
+  .iconbtn.warn{color:var(--orange);}
   .iconbtn:active{background:#eef0f3;}
 
   .seg{display:flex; background:#eef0f3; border-radius:10px; padding:4px; margin-bottom:14px;}
@@ -174,6 +177,16 @@
   .switch input:checked + .slider{background:var(--green);}
   .switch input:checked + .slider:before{transform:translateX(20px);}
   .reptag{display:inline-block; margin-left:6px; font-size:11px; font-weight:700; color:var(--green); background:#e3f5ea; border-radius:20px; padding:2px 8px; vertical-align:middle;}
+  .mdtag{display:inline-block; margin-left:6px; font-size:11px; font-weight:700; color:var(--orange); background:#ffe9cc; border-radius:20px; padding:2px 8px; vertical-align:middle;}
+  /* メモがある商品は、アイコンの下に横いっぱいで出す（見落とし防止） */
+  .memoline{flex:0 0 100%; display:flex; align-items:center; gap:7px; margin-top:2px;
+    background:#fff8e8; border:1px solid #f0dcb4; border-radius:9px; padding:8px 10px;
+    font-size:12.5px; color:#7a5a12; min-width:0;}
+  .memoline svg{width:15px; height:15px; flex:0 0 auto;}
+  .memoline b{flex:0 0 auto; font-weight:700;}
+  .memoline span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  /* 値下げの「未／済」 */
+  .mdseg{margin:4px 0 0;}
   .seg button.on{background:#fff; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.08);}
   /* 月グループ（開閉） */
   .mgroup{margin-bottom:12px;}
@@ -405,6 +418,15 @@
         <input id="imgInput" type="file" accept="image/*" style="display:none">
       </div>
 
+      <label>値下げ</label>
+      <div class="seg mdseg" id="mdSeg">
+        <button type="button" class="on" data-v="0">未</button>
+        <button type="button" data-v="1">済</button>
+      </div>
+
+      <label>メモ（任意）</label>
+      <input id="memo" maxlength="120" placeholder="例） レジ前の棚に移動">
+
       <label>個数</label>
       <div class="row" style="align-items:center">
         <button class="btn sec sm" id="qtyMinus" style="flex:0 0 52px">−</button>
@@ -582,6 +604,15 @@
       <input id="eImgInput" type="file" accept="image/*" style="display:none">
     </div>
 
+    <label>値下げ</label>
+    <div class="seg mdseg" id="eMdSeg">
+      <button type="button" class="on" data-v="0">未</button>
+      <button type="button" data-v="1">済</button>
+    </div>
+
+    <label>メモ（任意）</label>
+    <input id="eMemo" maxlength="120" placeholder="例） レジ前の棚に移動">
+
     <label>個数</label>
     <div class="row" style="align-items:center">
       <button class="btn sec sm" id="eQtyMinus" style="flex:0 0 52px">−</button>
@@ -670,7 +701,10 @@ const IC = {
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
   trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
   undo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
-  caret:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>'
+  caret:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+  tag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.6" cy="7.6" r="1.3"/></svg>',
+  tagOn:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.6" cy="7.6" r="1.5" fill="#fff" stroke="none"/></svg>',
+  memo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v13l-5 5H5z"/><path d="M19 16h-5v5"/><path d="M9 8h6M9 12h4"/></svg>'
 };
 
 function startSync(){
@@ -1037,10 +1071,31 @@ function stopCam(){
 /* ============ 登録の流れ（開始 → バーコード → 商品情報） ============
    前の商品の入力が残ったまま次を登録してしまう事故を防ぐため、
    「登録を開始」のたびに入力欄をすべて空にしてから始める。 */
+// 値下げ「未／済」の切替（登録・編集で共通）
+function bindMdSeg(segId){
+  document.querySelectorAll('#'+segId+' button').forEach(b=>{
+    b.onclick=()=>{
+      document.querySelectorAll('#'+segId+' button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+    };
+  });
+}
+function getMd(segId){ const on=document.querySelector('#'+segId+' button.on'); return !!(on && on.dataset.v==='1'); }
+function setMd(segId, val){
+  document.querySelectorAll('#'+segId+' button').forEach(b=>{
+    b.classList.toggle('on', (b.dataset.v==='1')===!!val);
+  });
+}
+bindMdSeg('mdSeg'); bindMdSeg('eMdSeg');
+
 function clearEntry(){
   $('#jan').value=''; $('#pname').value=''; $('#qty').value='';
-  $('#edate').value=''; $('#masterNote').textContent='';
+  $('#masterNote').textContent='';
   $('#repeatChk').checked=false;
+  // 廃棄日は当日を既定にする（空欄だと選び忘れて見逃すため）
+  $('#edate').value = toLocalInput(new Date()).date;
+  setMd('mdSeg', false);          // 値下げは「未」から
+  $('#memo').value='';
   currentImg=''; showImgPreview();
   setActiveChip(null);
 }
@@ -1073,8 +1128,8 @@ function toEntryForm(){
   stopCam();
   const j=$('#jan').value.trim();
   $('#janShow').textContent = j ? ('バーコード '+j) : 'バーコードなし';
-  // 廃棄日は毎回まっさらに。前の商品の日付が残って誤登録になるのを防ぐ
-  $('#edate').value=''; setActiveChip(null);
+  // 廃棄日は毎回「当日」に戻す。前の商品の日付が残るのを防ぎつつ、空欄で見逃すのも防ぐ
+  $('#edate').value = toLocalInput(new Date()).date; setActiveChip(null);
   scanGoStep(2);
 }
 $('#beginBtn').onclick   = beginEntry;
@@ -1206,6 +1261,8 @@ $('#saveBtn').onclick = ()=>{
   const qtyRaw = $('#qty').value.trim();
   const qty = qtyRaw==='' ? null : Math.max(1, +qtyRaw||1); // 空欄OK（繰り返し商品など）
   const repeat = $('#repeatChk').checked;
+  const markedDown = getMd('mdSeg');   // 値下げ済みかどうか
+  const memo = $('#memo').value.trim();
   if(!getStore()){ openStoreGate(); return; }
   if(!name){ showToast('商品名を入力してください'); return; }
   if(!date){ showToast('廃棄日を選んでください'); return; }
@@ -1218,7 +1275,7 @@ $('#saveBtn').onclick = ()=>{
   const id = uid();
   const b = baseRef();
   // アイテム追加（共有DBへ。オフライン時は自動でキュー→復帰時に同期）
-  b.collection('items').doc(id).set({jan, name, expiry, qty, img:itemImg, repeat, createdAt:new Date().toISOString(), discarded:false});
+  b.collection('items').doc(id).set({jan, name, expiry, qty, img:itemImg, repeat, markedDown, memo, createdAt:new Date().toISOString(), discarded:false});
   // マスター更新（次回から自動表示。merge で既存の画像/名前を消さない）
   if(jan) b.collection('master').doc(jan).set(img?{name, img}:{name}, {merge:true});
   // 入力を空にして「登録を開始」の画面へ戻す
@@ -1252,13 +1309,15 @@ function itemHTML(i){
       ${th?`<img class="thumb" src="${esc(th)}" alt="">`:''}
       <div class="info" onclick="editItem('${esc(i.id)}')" title="タップで編集">
         <div class="name">${esc(i.name)}</div>
-        <div class="meta">期限 ${fmtDate(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span>${i.repeat?'<span class="reptag">繰り返し</span>':''}</div>
+        <div class="meta">期限 ${fmtDate(i.expiry)} ・ <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span>${i.markedDown?'<span class="mdtag">値下げ済</span>':''}${i.repeat?'<span class="reptag">繰り返し</span>':''}</div>
       </div>
       <div class="qty">${i.qty!=null?`${i.qty}点`:'—'}</div>
+      <button class="iconbtn${i.markedDown?' warn':''}" onclick="toggleMd('${esc(i.id)}')" aria-label="値下げ">${i.markedDown?IC.tagOn:IC.tag}<span class="ib-label">値下げ</span></button>
       ${i.discarded
         ? `<button class="iconbtn" onclick="undiscard('${esc(i.id)}')" aria-label="戻す">${IC.undo}<span class="ib-label">戻す</span></button>`
         : `<button class="iconbtn ok" onclick="discard('${esc(i.id)}')" aria-label="廃棄">${IC.check}<span class="ib-label">廃棄</span></button>`}
       <button class="iconbtn danger" onclick="delItem('${esc(i.id)}')" aria-label="削除">${IC.trash}<span class="ib-label">削除</span></button>
+      ${i.memo?`<div class="memoline">${IC.memo}<b>メモ有り</b><span>${esc(i.memo)}</span></div>`:''}
     </div>`;
 }
 function renderList(){
@@ -1317,6 +1376,13 @@ function appConfirm(msg, cb, okText, okColor){
 $('#confirmYes').onclick=()=>{ $('#confirmModal').classList.remove('show'); const cb=_confirmCb; _confirmCb=null; if(cb) cb(); };
 $('#confirmNo').onclick=()=>{ $('#confirmModal').classList.remove('show'); _confirmCb=null; };
 $('#confirmModal').onclick=e=>{ if(e.target.id==='confirmModal'){ $('#confirmModal').classList.remove('show'); _confirmCb=null; } };
+// 一覧のアイコンで「未 ⇄ 済」を切り替える
+window.toggleMd=id=>{
+  const it=ITEMS.find(i=>i.id===id); if(!it) return;
+  const next=!it.markedDown;
+  baseRef().collection('items').doc(id).update({markedDown:next});
+  showToast(next?'値下げ済みにしました':'値下げを「未」に戻しました');
+};
 window.delItem=id=>{ appConfirm('この記録を削除しますか？', ()=> baseRef().collection('items').doc(id).delete()); };
 
 /* ============ 画像の拡大表示（サムネをタップ） ============ */
@@ -1390,6 +1456,8 @@ window.editItem=id=>{
   $('#eDate').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   $('#eQty').value = it.qty==null ? '' : it.qty;
   $('#eRepeatChk').checked = !!it.repeat;
+  setMd('eMdSeg', it.markedDown);
+  $('#eMemo').value = it.memo || '';
   // JANは商品に保存済みなので、出すだけ（読み込みは増えない）
   const jz=$('#eJanShow');
   if(it.jan){ jz.innerHTML = barcodeSVG(it.jan) || ('JAN '+esc(it.jan)); jz.style.display='flex'; }
@@ -1422,6 +1490,8 @@ $('#eSave').onclick=()=>{
   const name=$('#eName').value.trim(), date=$('#eDate').value;
   const eQtyRaw=$('#eQty').value.trim(); const qty = eQtyRaw==='' ? null : Math.max(1,+eQtyRaw||1);
   const repeat=$('#eRepeatChk').checked;
+  const markedDown=getMd('eMdSeg');
+  const memo=$('#eMemo').value.trim();
   if(!name){ showToast('商品名を入力してください'); return; }
   if(!date){ showToast('廃棄日を選んでください'); return; }
   const expiry=new Date(`${date}T12:00:00`).toISOString();
@@ -1429,7 +1499,7 @@ $('#eSave').onclick=()=>{
   const b=baseRef();
   // バーコードあり＝画像はマスターへ集約し記録側は空に（重複解消）。なし＝記録に保持
   const itemImg = (it && it.jan) ? '' : editImg;
-  b.collection('items').doc(editingId).update({name, expiry, qty, img:itemImg, repeat});
+  b.collection('items').doc(editingId).update({name, expiry, qty, img:itemImg, repeat, markedDown, memo});
   if(it && it.jan) b.collection('master').doc(it.jan).set(editImg?{name, img:editImg}:{name}, {merge:true});
   $('#editModal').classList.remove('show'); editingId=null;
   showToast('更新しました');
@@ -1780,7 +1850,7 @@ $('#bmExit').onclick = bmFinish;
 
 /* ============ 起動時 ============ */
 (function init(){
-  // 廃棄日は既定値を入れない（自分で選んでもらう。誤登録の防止）
+  // 廃棄日は当日を既定にする（空欄だと選び忘れて見逃すため。2026-09-09 変更）
   updateStoreLabel();
   // 店舗コード設定
   $('#storeBtn').onclick=()=>openStoreGate();

@@ -165,7 +165,7 @@
        └────────┴──────────────────────────────┘
      3段の高さを決め打ちにして、写真やメモの有無によらず全カード同じ高さにする */
   .item{display:grid; grid-template-columns:auto minmax(0,1fr) auto;
-    grid-template-rows:auto auto 26px;
+    grid-template-rows:auto auto auto;   /* メモが無ければ3段目は消えて2段になる */
     grid-template-areas:"thumb name name" "thumb meta acts" "thumb memo memo";
     align-items:center; column-gap:8px; row-gap:2px;
     background:#fff; border:1px solid var(--line); border-left-width:6px;
@@ -175,7 +175,7 @@
   .item.over{border-left-color:var(--red); background:#fdf1f0;}
 
   /* 写真：無い商品も同じ枠を出して左端を揃える */
-  .item .ph{grid-area:thumb; position:relative; width:64px; height:64px;}
+  .item .ph{grid-area:thumb; position:relative; width:58px; height:58px;}
   .item .ph .thumb{width:100%; height:100%; object-fit:cover; border-radius:11px; background:#eef0f3; display:block; cursor:zoom-in;}
   .item .ph .none{width:100%; height:100%; border-radius:11px; background:#eef1f5; cursor:pointer;
     border:1px dashed #d3d8e0; display:flex; align-items:center; justify-content:center; color:#b9c0ca;}
@@ -188,14 +188,14 @@
   .item .name{grid-area:name; font-weight:700; font-size:16px; line-height:1.35; cursor:pointer;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .item .meta{grid-area:meta; display:flex; align-items:center; flex-wrap:nowrap; gap:5px;
-    min-width:0; overflow:hidden; font-size:11px; color:var(--gray); white-space:nowrap; cursor:pointer;}
-  .item .badge{font-size:10.5px; font-weight:700; padding:3px 7px; border-radius:20px; white-space:nowrap; flex:0 0 auto;}
+    min-width:0; overflow:hidden; font-size:12px; color:var(--gray); white-space:nowrap; cursor:pointer;}
+  .item .badge{font-size:11px; font-weight:700; padding:3px 7px; border-radius:20px; white-space:nowrap; flex:0 0 auto;}
   .badge.ok{background:#e3f5ea; color:var(--green);}
   .badge.soon{background:#ffe9cc; color:var(--orange);}
   .badge.over{background:#fbdedb; color:var(--red);}
 
   .item .acts{grid-area:acts; display:flex; align-items:center; justify-content:flex-end; gap:2px;}
-  .item .qty{font-size:13px; font-weight:700; min-width:24px; text-align:right; margin-right:1px;}
+  .item .qty{font-size:13.5px; font-weight:700; width:30px; text-align:right; margin-right:1px; flex:0 0 auto;}
 
   /* メモ：操作アイコンの下の空きに収める。カードの高さは伸びない */
   /* width:0 + min-width:100% で「列の幅はアイコン側だけで決まる」ようにする。
@@ -207,9 +207,9 @@
   .item .memo svg{width:14px; height:14px; flex:0 0 auto;}
   .item .memo span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
-  .iconbtn{background:none; border:none; padding:6px 3px; min-width:32px; cursor:pointer; color:var(--gray); border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; gap:2px;}
-  .iconbtn svg{width:21px; height:21px; display:block;}
-  .iconbtn .ib-label{font-size:9.5px; font-weight:700; line-height:1; letter-spacing:-.02em;}
+  .iconbtn{background:none; border:none; padding:7px 4px; min-width:38px; cursor:pointer; color:var(--gray); border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; gap:2px;}
+  .iconbtn svg{width:24px; height:24px; display:block;}
+  .iconbtn .ib-label{font-size:10px; font-weight:700; line-height:1; letter-spacing:-.02em;}
   .iconbtn.ok{color:var(--green);}
   .iconbtn.danger{color:var(--red);}
   .iconbtn.warn{color:var(--orange);}
@@ -956,6 +956,7 @@ const $ = s => document.querySelector(s);
 const pad = n => String(n).padStart(2,'0');
 function toLocalInput(d){ return {date:`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`, time:`${pad(d.getHours())}:${pad(d.getMinutes())}`}; }
 function fmtDT(iso){ const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function fmtDateShort(iso){ const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()}`; }
 function fmtDate(iso){ const d=new Date(iso); const w=['日','月','火','水','木','金','土'][d.getDay()]; return `${d.getMonth()+1}/${d.getDate()}(${w})`; }
 // 廃棄日 = 期限日（例：期限8/22 → 8/22に廃棄）
 function discardDateObj(iso){ const d=new Date(iso); d.setHours(0,0,0,0); return d; }
@@ -1365,7 +1366,7 @@ function itemHTML(i){
       <div class="name" ${open} title="タップで編集">${esc(i.name)}</div>
       <div class="meta" ${open}>
         <span class="badge ${st}">${i.discarded?'廃棄済み':statusLabel(i.expiry)}</span>
-        <span>${fmtDate(i.expiry)}</span>
+        <span>${fmtDateShort(i.expiry)}</span>
       </div>
       <div class="acts">
         <span class="qty">${i.qty!=null?`${i.qty}点`:'—'}</span>

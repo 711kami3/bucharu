@@ -16,7 +16,7 @@
 // ★以後、index.html を更新したら必ずこの番号を上げること。
 // 番号を上げないと、端末は古い版を使い続ける（実際にそうなることを確認済み）。
 
-const CACHE = 'fm-v36';   // ★更新時は必ず番号を上げる（上げないと古い版が残り続ける）
+const CACHE = 'fm-v37';   // ★更新時は必ず番号を上げる（上げないと古い版が残り続ける）
 
 // 通信をこの時間だけ待つ。超えたらキャッシュを返す（通信は裏で続く）
 const NET_TIMEOUT_MS = 3000;
@@ -24,6 +24,7 @@ const NET_TIMEOUT_MS = 3000;
 const ASSETS = [
   './', './index.html', './terms.html', './manifest.json',
   './fuji-normal.png', './fuji-surprise.png', './fuji-scold.png', './fuji-sleepy.png',
+  './fuji-icon.png',
   './bucharu-icon.png',
   './vendor/zxing.min.js',
   './vendor/firebase-app-compat.js',
@@ -104,11 +105,11 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', event => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch (e) {}
-  const title = d.title || 'ぶちゃる';
+  const title = d.title || 'ふじばあ';
   const body  = d.body  || '今日ぶちゃる商品があります';
   event.waitUntil(self.registration.showNotification(title, {
     body,
-    icon: './icon.png',
+    icon: './fuji-icon.png',
     badge: './icon.png',
     tag: 'bucharu-daily',   // 同じタグ＝通知が積み上がらず、最新の1件に置き換わる
     renotify: true,

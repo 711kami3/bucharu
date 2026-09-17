@@ -16,7 +16,7 @@
 // ★以後、index.html を更新したら必ずこの番号を上げること。
 // 番号を上げないと、端末は古い版を使い続ける（実際にそうなることを確認済み）。
 
-const CACHE = 'fm-v35';   // ★更新時は必ず番号を上げる（上げないと古い版が残り続ける）
+const CACHE = 'fm-v36';   // ★更新時は必ず番号を上げる（上げないと古い版が残り続ける）
 
 // 通信をこの時間だけ待つ。超えたらキャッシュを返す（通信は裏で続く）
 const NET_TIMEOUT_MS = 3000;
@@ -95,5 +95,35 @@ self.addEventListener('fetch', e => {
     const timeout = new Promise(r => setTimeout(() => r(null), NET_TIMEOUT_MS));
     const fresh = await Promise.race([network, timeout]);
     return (fresh && fresh.ok) ? fresh : cached;
+  })());
+});
+
+/* ============ プッシュ通知 ============
+   アプリを閉じていても、ここが起きて通知を出す。
+   中身（商品名など）は入れない。件数だけをロック画面に出す方針。 */
+self.addEventListener('push', event => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (e) {}
+  const title = d.title || 'ぶちゃる';
+  const body  = d.body  || '今日ぶちゃる商品があります';
+  event.waitUntil(self.registration.showNotification(title, {
+    body,
+    icon: './icon.png',
+    badge: './icon.png',
+    tag: 'bucharu-daily',   // 同じタグ＝通知が積み上がらず、最新の1件に置き換わる
+    renotify: true,
+    data: { url: './' }
+  }));
+});
+
+// 通知をタップ：すでに開いていればそれを前面に、無ければ開く
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of list) {
+      if (c.url.startsWith(self.registration.scope)) return c.focus();
+    }
+    return self.clients.openWindow('./');
   })());
 });

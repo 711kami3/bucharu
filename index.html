@@ -208,6 +208,23 @@
     font-size:12px; color:#8a6a20; line-height:1.5; align-items:center;}
   .item .memo svg{width:14px; height:14px; flex:0 0 auto;}
   .item .memo span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  /* 3段目：値下げの場所・額（オレンジ）とメモを1行に並べる */
+  .item .memo .mdinfo{display:flex; align-items:center; gap:3px; flex:0 0 auto; max-width:74%; min-width:0;
+    color:#b5590a; font-weight:700; white-space:nowrap; overflow:hidden;}
+  .item .memo .mm{display:flex; align-items:center; gap:4px; flex:1 1 auto; min-width:0;
+    padding-left:6px; border-left:1px solid #ecd6ad;}
+  .item .memo .mdinfo + .mm{margin-left:2px;}
+  .item .memo .mdinfo:only-child{flex:1 1 auto;}
+  /* 値下げの選択（登録・編集・一覧の値下げ画面で共通） */
+  .mdbox{margin-top:2px;}
+  .mdlbl{font-size:12px; color:var(--gray); font-weight:700; margin:10px 0 2px;}
+  .mdchips{display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;}
+  .mdother{margin-top:6px;}
+  /* 管理：値下げの選択肢の編集 */
+  .tplrow{display:flex; flex-wrap:wrap; gap:6px;}
+  .tplchip{display:inline-flex; align-items:center; gap:2px; background:#eef0f3; border-radius:16px; padding:3px 3px 3px 12px; font-size:13.5px;}
+  .tplchip button{border:none; background:none; color:#8a92a0; font-size:17px; line-height:1; padding:4px 9px; cursor:pointer;}
+  .tpladd{margin-top:8px;}
 
   .iconbtn{background:none; border:none; padding:7px 4px; min-width:38px; cursor:pointer; color:var(--gray); border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; gap:2px;}
   .iconbtn svg{width:24px; height:24px; display:block;}
@@ -327,6 +344,12 @@
     font-size:12.5px; color:#7a5a12; line-height:1.5;}
   .bcard .bmemo svg{width:15px; height:15px; flex:0 0 auto; margin-top:1px;}
   .bcard .bmemo span{min-width:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  /* 値下げ済み：廃棄するとき探しに行く場所なので、場所を大きく */
+  .bcard .bmd{display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; margin-top:12px;
+    background:#fff3e0; border:1px solid #f3cf9b; border-radius:10px; padding:8px 10px;}
+  .bcard .bmdtag{font-size:11.5px; font-weight:700; color:#fff; background:var(--orange); border-radius:10px; padding:2px 8px;}
+  .bcard .bmdplace{font-size:17px; font-weight:800; color:#8a4a10;}
+  .bcard .bmddisc{font-size:13.5px; font-weight:700; color:#b5590a;}
   /* 次の商品を後ろに薄く重ねる（あと何枚あるかが見た目で分かる） */
   .bcard.behind{position:absolute; left:50%; top:50%; z-index:0; pointer-events:none; opacity:.5;
     transform:translate(-50%,-50%) translateY(18px) scale(.93); filter:saturate(.8);
@@ -473,6 +496,7 @@
         <button type="button" class="on" data-v="0">未</button>
         <button type="button" data-v="1">済</button>
       </div>
+      <div class="mdbox" id="mdFields" style="display:none"></div>
 
       <label>メモ（任意）</label>
       <input id="memo" maxlength="120" placeholder="例） レジ前の棚に移動">
@@ -598,6 +622,16 @@
         <input type="file" id="bkFile" accept="application/json,.json" style="display:none">
         <p class="gate-help">月1回ほど「書き出す」でファイル保存を。万一のとき「復元する」で戻せます。</p>
       </div>
+      <div class="gate-sec">
+        <p class="gate-label">値下げの選択肢</p>
+        <p class="gate-help" style="margin:0 0 6px">場所</p>
+        <div class="tplrow" id="tplPlaces"></div>
+        <div class="row tpladd"><input id="tplPlaceIn" maxlength="16" placeholder="場所を追加"><button class="btn sec sm" id="tplPlaceAdd" type="button" style="flex:0 0 auto">追加</button></div>
+        <p class="gate-help" style="margin:12px 0 6px">値下げ額</p>
+        <div class="tplrow" id="tplDiscounts"></div>
+        <div class="row tpladd"><input id="tplDiscIn" maxlength="16" placeholder="例） 20円・40%"><button class="btn sec sm" id="tplDiscAdd" type="button" style="flex:0 0 auto">追加</button></div>
+        <p class="gate-help">店に合わせて変えられます（全端末に反映）。「その他」はいつでも選べます。<button type="button" class="linkbtn" id="tplReset">最初の選択肢に戻す</button></p>
+      </div>
     </div>
 
     <div class="gate-sec">
@@ -665,6 +699,7 @@
       <button type="button" class="on" data-v="0">未</button>
       <button type="button" data-v="1">済</button>
     </div>
+    <div class="mdbox" id="eMdFields" style="display:none"></div>
 
     <label>メモ（任意）</label>
     <input id="eMemo" maxlength="120" placeholder="例） レジ前の棚に移動">
@@ -680,6 +715,20 @@
       <button class="btn sec" id="eCancel">キャンセル</button>
       <button class="btn" id="eSave">保存する</button>
     </div>
+  </div>
+</div>
+
+<!-- 値下げ：場所と額を選ぶ -->
+<div class="modal" id="mdModal">
+  <div class="sheet">
+    <h2>値下げ</h2>
+    <p class="muted" id="mdName" style="margin:0 0 4px"></p>
+    <div id="mdPickFields"></div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn sec" id="mdCancel" type="button">キャンセル</button>
+      <button class="btn" id="mdSave" type="button" style="background:var(--orange)">値下げ済みにする</button>
+    </div>
+    <button class="btn sec" id="mdUnset" type="button" style="margin-top:10px; display:none">値下げを「未」に戻す</button>
   </div>
 </div>
 
@@ -765,8 +814,97 @@ const IC = {
   repeat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>'
 };
 
+/* ============ 値下げの場所・額（店ごとの選択肢） ============
+   店の情報（stores/{合言葉}）に保存する。もともと「店のメンバーは読める・メイン端末だけ書ける」
+   場所なので、ルールの追加は不要。読めないときは最初の選択肢で使える。 */
+const MD_DEFAULT_PLACES=['通常売場','処分品コンテナ','レジ周辺','バックルーム'];
+const MD_DEFAULT_DISCOUNTS=['30円','50円','100円','30%','50%'];
+let STORE_TPL={places:MD_DEFAULT_PLACES.slice(), discounts:MD_DEFAULT_DISCOUNTS.slice()};
+let unsubTpl=null;
+function cleanTpl(a, fallback){
+  if(!Array.isArray(a)) return fallback.slice();          // 未設定なら最初の選択肢
+  const out=[];
+  a.forEach(x=>{ const t=String(x==null?'':x).trim().slice(0,16); if(t && !out.includes(t)) out.push(t); });
+  return out.slice(0,12);
+}
+function applyTpl(d){
+  STORE_TPL={ places:    cleanTpl(d && d.markdownPlaces,    MD_DEFAULT_PLACES),
+              discounts: cleanTpl(d && d.markdownDiscounts, MD_DEFAULT_DISCOUNTS) };
+  renderTplEditor();
+}
+function watchTpl(){
+  if(unsubTpl){ unsubTpl(); unsubTpl=null; }
+  if(!getStore()) return;
+  unsubTpl = fbDb.collection('stores').doc(getStore()).onSnapshot(
+    d=>applyTpl(d.exists ? d.data() : null),
+    e=>{ console.warn('tpl', e); applyTpl(null); }
+  );
+}
+function mdLabel(i){ return [i.markdownPlace, i.markdownDiscount].filter(Boolean).join('・'); }
+// 選択肢のボタン列＋「その他」（押すと手入力欄が出る）。今の値が選択肢に無ければ「その他」扱い
+function mdGroupHTML(key, list, current){
+  const isOther = !!current && !list.includes(current);
+  return `<div class="mdchips" data-key="${key}">`
+    + list.map(v=>`<button type="button" class="chip${v===current?' on':''}" data-v="${esc(v)}">${esc(v)}</button>`).join('')
+    + `<button type="button" class="chip${isOther?' on':''}" data-other="1">その他</button></div>`
+    + `<input class="mdother" data-key="${key}" maxlength="16" placeholder="手入力" value="${isOther?esc(current):''}" style="display:${isOther?'block':'none'}">`;
+}
+function renderMdFields(boxId, place, discount){
+  const box=$('#'+boxId); if(!box) return;
+  box.innerHTML =
+      `<div class="mdlbl">場所（任意）</div>`   + mdGroupHTML('place',    STORE_TPL.places,    place||'')
+    + `<div class="mdlbl">値下げ額（任意）</div>` + mdGroupHTML('discount', STORE_TPL.discounts, discount||'');
+  box.querySelectorAll('.mdchips').forEach(g=>{
+    const inp=box.querySelector('.mdother[data-key="'+g.dataset.key+'"]');
+    g.querySelectorAll('.chip').forEach(c=>{
+      c.onclick=()=>{
+        const was=c.classList.contains('on');
+        g.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+        if(was){ inp.style.display='none'; return; }        // もう一度押すと選択を外せる（任意なので）
+        c.classList.add('on');
+        if(c.dataset.other){ inp.style.display='block'; inp.focus(); } else inp.style.display='none';
+      };
+    });
+  });
+}
+function readMdGroup(box, key){
+  if(!box) return '';
+  const g=box.querySelector('.mdchips[data-key="'+key+'"]'); if(!g) return '';
+  const on=g.querySelector('.chip.on'); if(!on) return '';
+  if(on.dataset.other) return box.querySelector('.mdother[data-key="'+key+'"]').value.trim().slice(0,16);
+  return on.dataset.v || '';
+}
+// 管理（メイン端末）：選択肢の編集
+function renderTplEditor(){
+  const draw=(id,list,field)=>{
+    const el=$('#'+id); if(!el) return;
+    el.innerHTML = list.length
+      ? list.map((v,k)=>`<span class="tplchip">${esc(v)}<button type="button" aria-label="${esc(v)}を削除" data-field="${field}" data-k="${k}">×</button></span>`).join('')
+      : '<span class="gate-help">（なし。「その他」だけになります）</span>';
+    el.querySelectorAll('button').forEach(b=>{ b.onclick=()=>tplRemove(b.dataset.field, +b.dataset.k); });
+  };
+  draw('tplPlaces',    STORE_TPL.places,    'markdownPlaces');
+  draw('tplDiscounts', STORE_TPL.discounts, 'markdownDiscounts');
+}
+function tplCur(field){ return (field==='markdownPlaces' ? STORE_TPL.places : STORE_TPL.discounts).slice(); }
+function tplSave(field, list){
+  if(!isOwnerUser() || !getStore()) return;
+  fbDb.collection('stores').doc(getStore()).update({[field]:list})
+    .catch(e=>{ console.warn('tpl save', e); showToast('保存できませんでした（メイン端末だけが変更できます）'); });
+}
+function tplRemove(field, k){ const l=tplCur(field); l.splice(k,1); tplSave(field,l); }
+function tplAdd(field, inputId){
+  const inp=$('#'+inputId); const v=inp.value.trim().slice(0,16);
+  if(!v) return;
+  const l=tplCur(field);
+  if(l.includes(v)){ showToast('すでにあります'); return; }
+  if(l.length>=12){ showToast('12個までです'); return; }
+  l.push(v); tplSave(field,l); inp.value='';
+}
+
 function startSync(){
   stopSync();
+  watchTpl();         // 値下げの選択肢（店ごと）
   refreshPushSub();   // 接続できた店舗に、この端末のあて先をひもづけ直す
   const b = baseRef();
   unsubItems = b.collection('items').onSnapshot(snap=>{
@@ -786,6 +924,7 @@ function startSync(){
 }
 function stopSync(){
   if(unsubItems){ unsubItems(); unsubItems=null; }
+  if(unsubTpl){ unsubTpl(); unsubTpl=null; }
   if(unsubMaster){ unsubMaster(); unsubMaster=null; }
   ITEMS=[]; MASTER={};
 }
@@ -1211,11 +1350,16 @@ function stopCam(){
    前の商品の入力が残ったまま次を登録してしまう事故を防ぐため、
    「登録を開始」のたびに入力欄をすべて空にしてから始める。 */
 // 値下げ「未／済」の切替（登録・編集で共通）
-function bindMdSeg(segId){
+function bindMdSeg(segId, fieldsId){
   document.querySelectorAll('#'+segId+' button').forEach(b=>{
     b.onclick=()=>{
       document.querySelectorAll('#'+segId+' button').forEach(x=>x.classList.remove('on'));
       b.classList.add('on');
+      const box=$('#'+fieldsId); if(!box) return;
+      if(getMd(segId)){
+        if(!box.innerHTML) renderMdFields(fieldsId, '', '');   // はじめて「済」にしたときに作る
+        box.style.display='block';
+      } else box.style.display='none';                         // 「未」に戻しても選んだ内容は残す
     };
   });
 }
@@ -1225,7 +1369,7 @@ function setMd(segId, val){
     b.classList.toggle('on', (b.dataset.v==='1')===!!val);
   });
 }
-bindMdSeg('mdSeg'); bindMdSeg('eMdSeg');
+bindMdSeg('mdSeg','mdFields'); bindMdSeg('eMdSeg','eMdFields');
 
 function clearEntry(){
   $('#jan').value=''; $('#pname').value=''; $('#qty').value='';
@@ -1234,6 +1378,7 @@ function clearEntry(){
   // 廃棄日は当日を既定にする（空欄だと選び忘れて見逃すため）
   $('#edate').value = toLocalInput(new Date()).date;
   setMd('mdSeg', false);          // 値下げは「未」から
+  $('#mdFields').innerHTML=''; $('#mdFields').style.display='none';
   $('#memo').value='';
   currentImg=''; showImgPreview();
   setActiveChip(null);
@@ -1402,6 +1547,8 @@ $('#saveBtn').onclick = ()=>{
   const repeat = $('#repeatChk').checked;
   const markedDown = getMd('mdSeg');   // 値下げ済みかどうか
   const memo = $('#memo').value.trim();
+  const markdownPlace    = markedDown ? readMdGroup($('#mdFields'),'place')    : '';
+  const markdownDiscount = markedDown ? readMdGroup($('#mdFields'),'discount') : '';
   if(!getStore()){ openStoreGate(); return; }
   if(!name){ showToast('商品名を入力してください'); return; }
   if(!date){ showToast('廃棄日を選んでください'); return; }
@@ -1414,7 +1561,7 @@ $('#saveBtn').onclick = ()=>{
   const id = uid();
   const b = baseRef();
   // アイテム追加（共有DBへ。オフライン時は自動でキュー→復帰時に同期）
-  b.collection('items').doc(id).set({jan, name, expiry, qty, img:itemImg, repeat, markedDown, memo, createdAt:new Date().toISOString(), discarded:false});
+  b.collection('items').doc(id).set({jan, name, expiry, qty, img:itemImg, repeat, markedDown, markdownPlace, markdownDiscount, memo, createdAt:new Date().toISOString(), discarded:false});
   // マスター更新（次回から自動表示。merge で既存の画像/名前を消さない）
   if(jan) b.collection('master').doc(jan).set(img?{name, img}:{name}, {merge:true});
   // 入力を空にして「登録を開始」の画面へ戻す
@@ -1458,13 +1605,17 @@ function itemHTML(i){
       </div>
       <div class="acts">
         <span class="qty">${i.qty!=null?`${i.qty}点`:'—'}</span>
-        <button class="iconbtn${i.markedDown?' warn':''}" onclick="toggleMd('${esc(i.id)}')" aria-label="値下げ">${i.markedDown?IC.tagOn:IC.tag}<span class="ib-label">${i.markedDown?'値下済':'値下'}</span></button>
+        <button class="iconbtn${i.markedDown?' warn':''}" onclick="openMdPicker('${esc(i.id)}')" aria-label="値下げ">${i.markedDown?IC.tagOn:IC.tag}<span class="ib-label">${i.markedDown?'値下済':'値下'}</span></button>
         ${i.discarded
           ? `<button class="iconbtn" onclick="undiscard('${esc(i.id)}')" aria-label="戻す">${IC.undo}<span class="ib-label">戻す</span></button>`
           : `<button class="iconbtn ok" onclick="discard('${esc(i.id)}')" aria-label="廃棄">${IC.check}<span class="ib-label">廃棄</span></button>`}
         <button class="iconbtn danger" onclick="delItem('${esc(i.id)}')" aria-label="削除">${IC.trash}<span class="ib-label">削除</span></button>
       </div>
-      ${i.memo?`<div class="memo" ${open} title="${esc(i.memo)}">${IC.memo}<span>${esc(i.memo)}</span></div>`:''}
+      ${(()=>{ const md=i.markedDown?mdLabel(i):''; if(!md && !i.memo) return '';
+        return `<div class="memo" ${open} title="${esc([md,i.memo].filter(Boolean).join(' / '))}">`
+          + (md?`<span class="mdinfo">${IC.tag}<span>${esc(md)}</span></span>`:'')
+          + (i.memo?`<span class="mm">${IC.memo}<span>${esc(i.memo)}</span></span>`:'')
+          + `</div>`; })()}
     </div>`;
 }
 function renderList(){
@@ -1523,12 +1674,34 @@ function appConfirm(msg, cb, okText, okColor){
 $('#confirmYes').onclick=()=>{ $('#confirmModal').classList.remove('show'); const cb=_confirmCb; _confirmCb=null; if(cb) cb(); };
 $('#confirmNo').onclick=()=>{ $('#confirmModal').classList.remove('show'); _confirmCb=null; };
 $('#confirmModal').onclick=e=>{ if(e.target.id==='confirmModal'){ $('#confirmModal').classList.remove('show'); _confirmCb=null; } };
-// 一覧のアイコンで「未 ⇄ 済」を切り替える
-window.toggleMd=id=>{
+// 一覧の「値下」：場所と額を選んで値下げ済みにする（済の商品は内容の確認・変更・未に戻す）
+let mdItemId=null;
+window.openMdPicker=id=>{
   const it=ITEMS.find(i=>i.id===id); if(!it) return;
-  const next=!it.markedDown;
-  baseRef().collection('items').doc(id).update({markedDown:next});
-  showToast(next?'値下げ済みにしました':'値下げを「未」に戻しました');
+  mdItemId=id;
+  $('#mdName').textContent=it.name;
+  renderMdFields('mdPickFields', it.markdownPlace, it.markdownDiscount);
+  $('#mdSave').textContent = it.markedDown ? 'この内容で保存' : '値下げ済みにする';
+  $('#mdUnset').style.display = it.markedDown ? 'block' : 'none';
+  $('#mdModal').classList.add('show');
+};
+function closeMdPicker(){ $('#mdModal').classList.remove('show'); mdItemId=null; }
+$('#mdCancel').onclick=closeMdPicker;
+$('#mdModal').onclick=e=>{ if(e.target.id==='mdModal') closeMdPicker(); };
+$('#mdSave').onclick=()=>{
+  if(!mdItemId) return;
+  const box=$('#mdPickFields');
+  const markdownPlace=readMdGroup(box,'place'), markdownDiscount=readMdGroup(box,'discount');
+  baseRef().collection('items').doc(mdItemId).update({markedDown:true, markdownPlace, markdownDiscount});
+  const lb=[markdownPlace,markdownDiscount].filter(Boolean).join('・');
+  showToast('値下げ済みにしました'+(lb?`（${lb}）`:''));
+  closeMdPicker();
+};
+$('#mdUnset').onclick=()=>{
+  if(!mdItemId) return;
+  baseRef().collection('items').doc(mdItemId).update({markedDown:false, markdownPlace:'', markdownDiscount:''});
+  showToast('値下げを「未」に戻しました');
+  closeMdPicker();
 };
 window.delItem=id=>{ appConfirm('この記録を削除しますか？', ()=> baseRef().collection('items').doc(id).delete()); };
 
@@ -1604,6 +1777,8 @@ window.editItem=id=>{
   $('#eQty').value = it.qty==null ? '' : it.qty;
   $('#eRepeatChk').checked = !!it.repeat;
   setMd('eMdSeg', it.markedDown);
+  renderMdFields('eMdFields', it.markdownPlace, it.markdownDiscount);
+  $('#eMdFields').style.display = it.markedDown ? 'block' : 'none';
   $('#eMemo').value = it.memo || '';
   // JANは商品に保存済みなので、出すだけ（読み込みは増えない）
   const jz=$('#eJanShow');
@@ -1639,6 +1814,8 @@ $('#eSave').onclick=()=>{
   const repeat=$('#eRepeatChk').checked;
   const markedDown=getMd('eMdSeg');
   const memo=$('#eMemo').value.trim();
+  const markdownPlace    = markedDown ? readMdGroup($('#eMdFields'),'place')    : '';
+  const markdownDiscount = markedDown ? readMdGroup($('#eMdFields'),'discount') : '';
   if(!name){ showToast('商品名を入力してください'); return; }
   if(!date){ showToast('廃棄日を選んでください'); return; }
   const expiry=new Date(`${date}T12:00:00`).toISOString();
@@ -1646,17 +1823,17 @@ $('#eSave').onclick=()=>{
   const b=baseRef();
   // バーコードあり＝画像はマスターへ集約し記録側は空に（重複解消）。なし＝記録に保持
   const itemImg = (it && it.jan) ? '' : editImg;
-  b.collection('items').doc(editingId).update({name, expiry, qty, img:itemImg, repeat, markedDown, memo});
+  b.collection('items').doc(editingId).update({name, expiry, qty, img:itemImg, repeat, markedDown, markdownPlace, markdownDiscount, memo});
   if(it && it.jan) b.collection('master').doc(it.jan).set(editImg?{name, img:editImg}:{name}, {merge:true});
   $('#editModal').classList.remove('show'); editingId=null;
   showToast('更新しました');
 };
 
 /* ============ 繰り返し商品：次の廃棄日を入力 ============ */
-let nextId=null, nextDone=null; // nextDone: 入力を終えたら呼ぶ（ぶちゃるモードの連続入力用）
+let nextId=null, nextDone=null, nextCancel=null; // 保存したら nextDone、キャンセルなら nextCancel（無ければ nextDone）
 function addDays(n){ const d=new Date(); d.setDate(d.getDate()+n); return d; }
 function openNextDate(id, opts){
-  nextId=id; nextDone=(opts && opts.onDone) || null;
+  nextId=id; nextDone=(opts && opts.onDone) || null; nextCancel=(opts && opts.onCancel) || null;
   const it=DB.items().find(i=>i.id===id);
   $('#nName').textContent = it ? it.name : '';
   $('#nDate').value=toLocalInput(addDays(1)).date;
@@ -1664,10 +1841,11 @@ function openNextDate(id, opts){
   $('#nextModal').classList.add('show');
 }
 // モーダルを閉じ、待っている処理があれば続きへ
-function closeNextDate(){
+function closeNextDate(saved){
   $('#nextModal').classList.remove('show');
   nextId=null;
-  const cb=nextDone; nextDone=null;
+  const cb = saved ? nextDone : (nextCancel || nextDone);
+  nextDone=null; nextCancel=null;
   if(cb) cb();
 }
 document.querySelectorAll('#nChips .chip').forEach(c=>{
@@ -1678,15 +1856,16 @@ document.querySelectorAll('#nChips .chip').forEach(c=>{
     $('#nDate').value=toLocalInput(addDays(+p)).date; c.classList.add('on');
   };
 });
-$('#nCancel').onclick=()=>{ closeNextDate(); };
-$('#nextModal').onclick=e=>{ if(e.target.id==='nextModal'){ closeNextDate(); } };
+$('#nCancel').onclick=()=>{ closeNextDate(false); };
+$('#nextModal').onclick=e=>{ if(e.target.id==='nextModal'){ closeNextDate(false); } };
 $('#nSave').onclick=()=>{
   if(!nextId) return;
   const date=$('#nDate').value; if(!date){ showToast('日付を選んでください'); return; }
   const expiry=new Date(`${date}T12:00:00`).toISOString();
-  baseRef().collection('items').doc(nextId).update({expiry});
+  // 新しく入った分はまだ値下げしていない → 値下げは「未」に戻す（メモは残す）
+  baseRef().collection('items').doc(nextId).update({expiry, markedDown:false, markdownPlace:'', markdownDiscount:''});
   showToast('次の廃棄日を更新しました');
-  closeNextDate();
+  closeNextDate(true);
 };
 
 /* ============ カレンダー ============ */
@@ -1802,7 +1981,7 @@ function showFujiRandom(){
   showFuji(FUJI[i].f, FUJI[i].t);
 }
 
-let bmQueue=[], bmKept=[], bmRepeatDone=[], bmTomorrowOK=false, bmCard=null, bmUndoTimer=null, bmTotal=0, bmSwiped=false;
+let bmQueue=[], bmKept=[], bmTomorrowOK=false, bmCard=null, bmUndoTimer=null, bmTotal=0, bmSwiped=false;
 
 // 対象：超過(<0)・今日(0)・明日(1)廃棄の未廃棄アイテム（繰り返し商品も含む）。超過→今日→明日の順
 function bmTargets(){
@@ -1813,7 +1992,7 @@ function bmTargets(){
 }
 function openBuchiaru(){
   if(!getStore()){ openStoreGate(); return; }
-  bmQueue = bmTargets(); bmKept=[]; bmRepeatDone=[]; bmTomorrowOK=false; bmTotal=bmQueue.length; bmSwiped=false;
+  bmQueue = bmTargets(); bmKept=[]; bmTomorrowOK=false; bmTotal=bmQueue.length; bmSwiped=false;
   $('#bmPrompt').classList.remove('show');
   $('#bmFinish').classList.remove('show');
   $('#bmUndo').classList.remove('show');
@@ -1837,13 +2016,6 @@ function bmFinish(){
   $('#bmPrompt').classList.remove('show');
   bmClearCards(); bmCard=null;
   clearTimeout(bmUndoTimer); $('#bmUndo').classList.remove('show');
-  // ぶちゃった繰り返し商品は、最後にまとめて次の廃棄日を入力してもらう
-  if(bmRepeatDone.length>0){
-    const list=bmRepeatDone.slice(); bmRepeatDone=[];
-    const step=()=>{ if(list.length===0){ bmShowFuji(); return; } openNextDate(list.shift().id, {onDone:step}); };
-    step();
-    return;
-  }
   bmShowFuji();
 }
 function bmShowFuji(){
@@ -1909,6 +2081,10 @@ function bmCardEl(it){
     `<div class="btags"><span class="bday ${cls}">${label}</span>` +
       (it.repeat? `<span class="bday rep">繰り返し</span>` : '') + `</div>` +
     `<div class="bqty">${it.qty!=null? it.qty+'点' : '—'}</div>` +
+    (it.markedDown? `<div class="bmd"><span class="bmdtag">値下げ済</span>`
+        + (it.markdownPlace? `<span class="bmdplace">${esc(it.markdownPlace)}</span>` : '')
+        + (it.markdownDiscount? `<span class="bmddisc">${esc(it.markdownDiscount)}</span>` : '')
+        + `</div>` : '') +
     (it.memo? `<div class="bmemo">${IC.memo}<span>${esc(it.memo)}</span></div>` : '') + `</div>` +
     `<div class="bstamp up">ぶちゃる</div><div class="bstamp down">とっとく</div>`;
   return el;
@@ -1972,17 +2148,20 @@ function bmDiscard(it){
   bmSwiped=true;
   bmQueue = bmQueue.filter(q=>q.id!==it.id);
   if(it.repeat){
-    // 繰り返し商品はアーカイブせず、最後に次の廃棄日を入力してもらう
-    if(!bmRepeatDone.some(r=>r.id===it.id)) bmRepeatDone.push(it);
-  } else {
-    baseRef().collection('items').doc(it.id).update({discarded:true, discardedAt:new Date().toISOString()});
+    // 繰り返し商品：その場で次の廃棄日を入れてもらう。キャンセルならカードを戻す
+    clearTimeout(bmUndoTimer); $('#bmUndo').classList.remove('show');
+    openNextDate(it.id, {
+      onDone: bmNext,
+      onCancel: ()=>{ bmQueue.unshift(it); bmNext(); }
+    });
+    return;
   }
+  baseRef().collection('items').doc(it.id).update({discarded:true, discardedAt:new Date().toISOString()});
   // 元に戻す（数秒だけ表示）
   clearTimeout(bmUndoTimer);
   $('#bmUndo').classList.add('show');
   $('#bmUndoBtn').onclick=()=>{
-    if(it.repeat) bmRepeatDone = bmRepeatDone.filter(r=>r.id!==it.id);
-    else baseRef().collection('items').doc(it.id).update({discarded:false});
+    baseRef().collection('items').doc(it.id).update({discarded:false});
     bmQueue.unshift(it); $('#bmUndo').classList.remove('show'); clearTimeout(bmUndoTimer); bmNext();
   };
   bmUndoTimer=setTimeout(()=>$('#bmUndo').classList.remove('show'), 4000);
@@ -2012,6 +2191,13 @@ $('#bmExit').onclick = bmFinish;
   $('#gateGoogle').onclick=ownerLogin;
   $('#lockToggle').onclick=toggleLock;
   $('#pushToggle').onclick=togglePush;
+  $('#tplPlaceAdd').onclick=()=>tplAdd('markdownPlaces','tplPlaceIn');
+  $('#tplDiscAdd').onclick =()=>tplAdd('markdownDiscounts','tplDiscIn');
+  $('#tplReset').onclick=()=>appConfirm('値下げの選択肢を最初の状態に戻しますか？', ()=>{
+    tplSave('markdownPlaces', MD_DEFAULT_PLACES.slice());
+    tplSave('markdownDiscounts', MD_DEFAULT_DISCOUNTS.slice());
+  }, '戻す', 'var(--green)');
+  renderTplEditor();
   renderPushBtn();
   $('#bkExport').onclick=exportBackup;
   $('#bkImport').onclick=()=>$('#bkFile').click();

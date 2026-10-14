@@ -236,6 +236,18 @@
 
   .seg{display:flex; background:#eef0f3; border-radius:10px; padding:4px; margin-bottom:14px;}
   .seg button{flex:1; border:none; background:none; padding:9px 4px; border-radius:8px; font-size:14px; font-weight:600; color:var(--gray); cursor:pointer; white-space:nowrap;}
+  /* 調べる：見出し（画像・商品名・バーコード） */
+  .findHead{display:flex; gap:12px; align-items:center;}
+  .findHead .fimg{width:76px; height:76px; flex:0 0 76px; border-radius:10px; object-fit:cover; background:#f1f3f6; cursor:zoom-in;}
+  .findHead .fnone{width:76px; height:76px; flex:0 0 76px; border-radius:10px; background:#f1f3f6; border:1px dashed #cfd5dd; display:flex; align-items:center; justify-content:center; color:#a3abb6;}
+  .findHead .fnone svg{width:28px; height:28px;}
+  .findHead .fbody{flex:1 1 auto; min-width:0;}
+  .findHead .fname{font-weight:800; font-size:17px; line-height:1.35; word-break:break-all;}
+  .findHead .fcode{margin-top:6px;}
+  .findHead .fcode .bcode{width:min(100%,200px); display:block;}
+  .findHead .fcode.num{font-size:13px; color:var(--gray);}
+  .findSum{font-weight:700; font-size:14px; margin:14px 2px 8px; color:var(--text);}
+  .findMsg{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 14px; text-align:center; color:var(--gray); font-size:14px; line-height:1.6; margin-top:12px;}
   .janShow{background:#eef1f5; border-radius:10px; padding:9px 12px; font-size:13px; color:var(--gray); text-align:center;}
   .repeatToggle{display:flex; align-items:center; justify-content:space-between; gap:12px; background:#f7f8fa; border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:16px;}
   .rt-title{font-weight:700; font-size:14px;}
@@ -429,6 +441,8 @@
         <div style="font-weight:700; font-size:19px; margin-top:12px">商品を登録します</div>
         <p class="muted" style="margin:8px 0 20px">バーコードを読み取ってから、<br>廃棄日や個数を入力します。</p>
         <button class="btn" id="beginBtn">登録を開始</button>
+        <button class="btn sec" id="findBtn" style="margin-top:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;vertical-align:-3px;margin-right:6px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>商品を調べる</button>
+        <p class="muted" style="margin:8px 0 0; font-size:13px">バーコードを読むと、登録済みの廃棄日などを表示します</p>
       </div>
     </div>
 
@@ -513,6 +527,17 @@
         <button class="btn" id="saveBtn">✓ 登録する</button>
       </div>
     </div>
+    </div>
+
+    <!-- 調べる：読み取った商品の登録状況 -->
+    <div id="scanStep3" style="display:none">
+      <div class="card findHead" id="findHead"></div>
+      <div id="findList"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn sec" id="findAgain">続けて調べる</button>
+        <button class="btn" id="findRegister">この商品を登録</button>
+      </div>
+      <button class="btn sec" id="findDone" style="margin-top:8px">おわる</button>
     </div>
   </section>
 
@@ -931,6 +956,7 @@ function startSync(){
   });
   unsubMaster = b.collection('master').onSnapshot(snap=>{
     MASTER={}; snap.docs.forEach(d=> MASTER[d.id]=d.data());
+    if(scanStep===3) renderFind();
   }, err=>{ console.warn('master sync', err); });
 }
 function stopSync(){
@@ -943,6 +969,7 @@ function refreshUI(){
   const on=document.querySelector('nav button.on');
   const tab=on?on.dataset.tab:'scan';
   if(tab==='list') renderListTab();
+  if(scanStep===3) renderFind();
   checkAlerts();
 }
 function setSyncStatus(s){
@@ -1397,6 +1424,7 @@ function clearEntry(){
   setActiveChip(null);
 }
 let scanStep=0;
+let scanMode='reg';   // reg=登録する／find=調べる
 // スキャン画面をヘッダー／ナビを除いた実寸に合わせる（端末やSafariのURLバーに追随）
 function fitScanScreen(){
   const head=document.querySelector('header'), nav=document.querySelector('nav');
@@ -1416,10 +1444,14 @@ function scanGoStep(n){
   $('#scanStep0').style.display = n===0 ? '' : 'none';
   $('#scanStep1').style.display = n===1 ? '' : 'none';
   $('#scanStep2').style.display = n===2 ? '' : 'none';
+  $('#scanStep3').style.display = n===3 ? '' : 'none';
+  // 調べるときはカメラ画面の「バーコードなし」を出さない
+  $('#skipScan').style.display = scanMode==='find' ? 'none' : '';
+  $('#lookupBtn').textContent = scanMode==='find' ? 'この番号で調べる' : 'この番号で進む';
   applyBannerVisibility();
   if(n!==1) stopCam();
 }
-function beginEntry(){ clearEntry(); scanGoStep(1); startCam(); }
+function beginEntry(){ scanMode='reg'; clearEntry(); scanGoStep(1); startCam(); }
 // バーコードが決まったら（読み取り・手入力・スキップ）商品情報の入力へ
 function toEntryForm(){
   stopCam();
@@ -1456,6 +1488,7 @@ async function loopDetect(){
 }
 function onScanned(code){
   if(navigator.vibrate) navigator.vibrate(60);
+  if(scanMode==='find'){ showFind(code); return; }
   $('#jan').value = code;
   lookup(code);
   toEntryForm(); // 読み取れたら商品情報の入力へ（カメラもここで止まる）
@@ -1466,7 +1499,52 @@ function onScanned(code){
 $('#lookupBtn').onclick = ()=>{
   const c=$('#jan').value.trim();
   if(!c){ showToast('番号を入力してください'); return; }
+  if(scanMode==='find'){ showFind(c); return; }
   lookup(c); toEntryForm();
+};
+
+/* ============ 商品を調べる ============
+   読み取ったバーコードの商品が、この店でいまどう登録されているかを出す。
+   読むのは手元の一覧（同期済み）だけなので、通信も書き込みも増えない。 */
+let findCode='';
+function startFind(){ scanMode='find'; clearEntry(); scanGoStep(1); startCam(); }
+function showFind(code){
+  stopCam();
+  findCode=String(code||'').trim();
+  scanGoStep(3);
+  renderFind();
+  window.scrollTo(0,0);
+}
+function renderFind(){
+  const code=findCode;
+  const m=MASTER[code];
+  const all=DB.items().filter(i=>i.jan===code);
+  const live=all.filter(i=>!i.discarded).sort((a,b)=> new Date(a.expiry)-new Date(b.expiry));
+  const name = (m && m.name) || (all[0] && all[0].name) || '';
+  const img  = (m && safeImg(m.img)) || (all.map(i=>safeImg(i.img)).find(Boolean)) || '';
+  const bc   = barcodeSVG(code);
+  $('#findHead').innerHTML =
+    (img ? `<img class="fimg thumb" src="${esc(img)}" alt="" title="タップで拡大">` : `<div class="fnone">${IC.noimg}</div>`) +
+    `<div class="fbody"><div class="fname">${name?esc(name):'未登録の商品'}</div>` +
+    `<div class="fcode${bc?'':' num'}">${bc || ('バーコード '+esc(code))}</div></div>`;
+  let html='';
+  if(live.length){
+    const sum=live.reduce((n,i)=>n+qtyOf(i),0);
+    html = `<div class="findSum">未廃棄 ${live.length}件 / ${sum}点（廃棄日の近い順）</div>` + live.map(itemHTML).join('');
+  }else if(name){
+    html = `<div class="findMsg">いま未廃棄の記録はありません。<br>この商品を登録するときは下のボタンから進めます。</div>`;
+  }else{
+    html = `<div class="findMsg">この店ではまだ登録されていない商品です。</div>`;
+  }
+  $('#findList').innerHTML = html;
+}
+$('#findBtn').onclick      = startFind;
+$('#findAgain').onclick    = ()=>{ $('#jan').value=''; scanGoStep(1); startCam(); };
+$('#findDone').onclick     = ()=>{ scanMode='reg'; findCode=''; scanGoStep(0); };
+// 調べた商品をそのまま登録へ（バーコードは入力済み・商品名と画像は自動で入る）
+$('#findRegister').onclick = ()=>{
+  const c=findCode; scanMode='reg'; clearEntry();
+  $('#jan').value=c; lookup(c); toEntryForm();
 };
 function lookup(code){
   if(!code) return;
@@ -1765,6 +1843,7 @@ function bindThumbZoom(container){
 }
 bindThumbZoom($('#listArea'));
 bindThumbZoom($('#sheetBody'));
+bindThumbZoom($('#scanStep3'));
 
 /* ============ JAN（バーコード）の描画 ============
    13桁=JAN-13／8桁=JAN-8 に対応。画像も外部ライブラリも使わず、

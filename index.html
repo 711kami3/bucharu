@@ -214,7 +214,7 @@
   .item .memo .mm{display:flex; align-items:center; gap:4px; flex:1 1 auto; min-width:0;
     padding-left:6px; border-left:1px solid #ecd6ad;}
   .item .memo .mdinfo + .mm{margin-left:2px;}
-  .item .memo .mdinfo:only-child{flex:1 1 auto;}
+  .item .memo .mdinfo:only-child{flex:1 1 auto; max-width:100%;}
   /* 値下げの選択（登録・編集・一覧の値下げ画面で共通） */
   .mdbox{margin-top:2px;}
   .mdlbl{font-size:12px; color:var(--gray); font-weight:700; margin:10px 0 2px;}
@@ -528,6 +528,7 @@
       <div class="seg" id="listSeg">
         <button class="on" data-f="active">未廃棄</button>
         <button data-f="repeat">繰り返し</button>
+        <button data-f="md">値下げ済</button>
         <button data-f="done">廃棄済み</button>
       </div>
       <div id="listArea"></div>
@@ -700,6 +701,7 @@
       <button type="button" data-v="1">済</button>
     </div>
     <div class="mdbox" id="eMdFields" style="display:none"></div>
+    <div class="muted" id="eMdDate" style="display:none; margin-top:6px; font-size:13px"></div>
 
     <label>メモ（任意）</label>
     <input id="eMemo" maxlength="120" placeholder="例） レジ前の棚に移動">
@@ -841,6 +843,15 @@ function watchTpl(){
   );
 }
 function mdLabel(i){ return [i.markdownPlace, i.markdownDiscount].filter(Boolean).join('・'); }
+// 値下げした日（M/D）。記録が始まる前に「済」にした商品は空
+function mdDate(i){ return (i && i.markedDownAt) ? fmtDateShort(i.markedDownAt) : ''; }
+// 何日前に値下げしたか（今日=0）。記録なしは null
+function mdDaysAgo(i){
+  if(!i || !i.markedDownAt) return null;
+  const d=new Date(i.markedDownAt); if(isNaN(d)) return null;
+  d.setHours(0,0,0,0); const t=new Date(); t.setHours(0,0,0,0);
+  return Math.max(0, Math.round((t-d)/86400000));
+}
 // 選択肢のボタン列＋「その他」（押すと手入力欄が出る）。今の値が選択肢に無ければ「その他」扱い
 function mdGroupHTML(key, list, current){
   const isOther = !!current && !list.includes(current);
@@ -1360,6 +1371,8 @@ function bindMdSeg(segId, fieldsId){
         if(!box.innerHTML) renderMdFields(fieldsId, '', '');   // はじめて「済」にしたときに作る
         box.style.display='block';
       } else box.style.display='none';                         // 「未」に戻しても選んだ内容は残す
+      const dt=$('#'+fieldsId.replace('Fields','Date'));       // 編集画面の「値下げした日」も一緒に出し入れ
+      if(dt) dt.style.display = (getMd(segId) && dt.textContent) ? 'block' : 'none';
     };
   });
 }
@@ -1561,7 +1574,8 @@ $('#saveBtn').onclick = ()=>{
   const id = uid();
   const b = baseRef();
   // アイテム追加（共有DBへ。オフライン時は自動でキュー→復帰時に同期）
-  b.collection('items').doc(id).set({jan, name, expiry, qty, img:itemImg, repeat, markedDown, markdownPlace, markdownDiscount, memo, createdAt:new Date().toISOString(), discarded:false});
+  const markedDownAt = markedDown ? new Date().toISOString() : '';
+  b.collection('items').doc(id).set({jan, name, expiry, qty, img:itemImg, repeat, markedDown, markdownPlace, markdownDiscount, markedDownAt, memo, createdAt:new Date().toISOString(), discarded:false});
   // マスター更新（次回から自動表示。merge で既存の画像/名前を消さない）
   if(jan) b.collection('master').doc(jan).set(img?{name, img}:{name}, {merge:true});
   // 入力を空にして「登録を開始」の画面へ戻す
@@ -1611,7 +1625,9 @@ function itemHTML(i){
           : `<button class="iconbtn ok" onclick="discard('${esc(i.id)}')" aria-label="廃棄">${IC.check}<span class="ib-label">廃棄</span></button>`}
         <button class="iconbtn danger" onclick="delItem('${esc(i.id)}')" aria-label="削除">${IC.trash}<span class="ib-label">削除</span></button>
       </div>
-      ${(()=>{ const md=i.markedDown?mdLabel(i):''; if(!md && !i.memo) return '';
+      ${(()=>{ const ml=i.markedDown?mdLabel(i):'', mdd=i.markedDown?mdDate(i):'';
+        const md = mdd ? (mdd+' '+(ml||'値下げ')) : ml;   // 値下げした日を先頭に
+        if(!md && !i.memo) return '';
         return `<div class="memo" ${open} title="${esc([md,i.memo].filter(Boolean).join(' / '))}">`
           + (md?`<span class="mdinfo">${IC.tag}<span>${esc(md)}</span></span>`:'')
           + (i.memo?`<span class="mm">${IC.memo}<span>${esc(i.memo)}</span></span>`:'')
@@ -1621,6 +1637,7 @@ function itemHTML(i){
 function renderList(){
   let items = DB.items();
   const area=$('#listArea');
+  if(listFilter==='md'){ renderMdList(items.filter(i=>i.markedDown && !i.discarded)); return; }
   if(listFilter==='active') items=items.filter(i=>!i.discarded);
   else if(listFilter==='done') items=items.filter(i=>i.discarded);
   else if(listFilter==='repeat'){
@@ -1641,6 +1658,36 @@ function renderList(){
   area.innerHTML = groups.map(g=>{
     const collapsed = collapsedMonths.has(g.key);
     const label = `${g.y===thisYear?'':g.y+'年'}${g.m+1}月`;
+    return `<div class="mgroup">
+      <div class="mhead ${collapsed?'collapsed':''}" onclick="toggleMonth('${g.key}')">
+        <span class="caret">${IC.caret}</span>
+        <span>${label}</span>
+        <span class="mcount">${g.items.length}件 / ${g.sum}点</span>
+      </div>
+      ${collapsed?'':`<div class="mbody">${g.items.map(itemHTML).join('')}</div>`}
+    </div>`;
+  }).join('');
+}
+// 値下げ済タブ：値下げした日から1週間ごとにまとめる（未廃棄のみ）
+function renderMdList(items){
+  const area=$('#listArea');
+  if(items.length===0){ area.innerHTML='<div class="empty">値下げ済みの商品はありません</div>'; return; }
+  const groups=[], idx={};
+  items.forEach(i=>{
+    const d=mdDaysAgo(i);
+    const w = d==null ? 99 : Math.floor(d/7);            // 0=1週間以内, 1=2週間以内…
+    const key='md-'+w;
+    if(idx[key]===undefined){ idx[key]=groups.length; groups.push({key, w, items:[], sum:0}); }
+    const g=groups[idx[key]]; g.items.push(i); g.sum+=qtyOf(i);
+  });
+  groups.sort((a,b)=>a.w-b.w);
+  // 既定は「1週間以内」だけ開く（手で開け閉めした状態は保つ）
+  groups.forEach(g=>{ if(!seenMonths.has(g.key)){ seenMonths.add(g.key); if(g.w!==0) collapsedMonths.add(g.key); } });
+  area.innerHTML = groups.map(g=>{
+    // 中は廃棄日の近い順（先に売り切りたい順）
+    g.items.sort((a,b)=> new Date(a.expiry)-new Date(b.expiry));
+    const collapsed = collapsedMonths.has(g.key);
+    const label = g.w===99 ? '値下げ日の記録なし' : `${g.w+1}週間以内`;
     return `<div class="mgroup">
       <div class="mhead ${collapsed?'collapsed':''}" onclick="toggleMonth('${g.key}')">
         <span class="caret">${IC.caret}</span>
@@ -1692,14 +1739,17 @@ $('#mdSave').onclick=()=>{
   if(!mdItemId) return;
   const box=$('#mdPickFields');
   const markdownPlace=readMdGroup(box,'place'), markdownDiscount=readMdGroup(box,'discount');
-  baseRef().collection('items').doc(mdItemId).update({markedDown:true, markdownPlace, markdownDiscount});
+  const it=ITEMS.find(i=>i.id===mdItemId);
+  // 値下げした日は「未→済」にした時だけ記録。済のまま場所・額を直しても日付は変えない
+  const markedDownAt = (it && it.markedDown) ? (it.markedDownAt||'') : new Date().toISOString();
+  baseRef().collection('items').doc(mdItemId).update({markedDown:true, markdownPlace, markdownDiscount, markedDownAt});
   const lb=[markdownPlace,markdownDiscount].filter(Boolean).join('・');
   showToast('値下げ済みにしました'+(lb?`（${lb}）`:''));
   closeMdPicker();
 };
 $('#mdUnset').onclick=()=>{
   if(!mdItemId) return;
-  baseRef().collection('items').doc(mdItemId).update({markedDown:false, markdownPlace:'', markdownDiscount:''});
+  baseRef().collection('items').doc(mdItemId).update({markedDown:false, markdownPlace:'', markdownDiscount:'', markedDownAt:''});
   showToast('値下げを「未」に戻しました');
   closeMdPicker();
 };
@@ -1779,6 +1829,9 @@ window.editItem=id=>{
   setMd('eMdSeg', it.markedDown);
   renderMdFields('eMdFields', it.markdownPlace, it.markdownDiscount);
   $('#eMdFields').style.display = it.markedDown ? 'block' : 'none';
+  const emd=$('#eMdDate');
+  emd.textContent = (it.markedDown && it.markedDownAt) ? ('値下げした日：'+mdDate(it)) : '';
+  emd.style.display = emd.textContent ? 'block' : 'none';
   $('#eMemo').value = it.memo || '';
   // JANは商品に保存済みなので、出すだけ（読み込みは増えない）
   const jz=$('#eJanShow');
@@ -1823,7 +1876,8 @@ $('#eSave').onclick=()=>{
   const b=baseRef();
   // バーコードあり＝画像はマスターへ集約し記録側は空に（重複解消）。なし＝記録に保持
   const itemImg = (it && it.jan) ? '' : editImg;
-  b.collection('items').doc(editingId).update({name, expiry, qty, img:itemImg, repeat, markedDown, markdownPlace, markdownDiscount, memo});
+  const markedDownAt = !markedDown ? '' : ((it && it.markedDown) ? (it.markedDownAt||'') : new Date().toISOString());
+  b.collection('items').doc(editingId).update({name, expiry, qty, img:itemImg, repeat, markedDown, markdownPlace, markdownDiscount, markedDownAt, memo});
   if(it && it.jan) b.collection('master').doc(it.jan).set(editImg?{name, img:editImg}:{name}, {merge:true});
   $('#editModal').classList.remove('show'); editingId=null;
   showToast('更新しました');
@@ -1863,7 +1917,7 @@ $('#nSave').onclick=()=>{
   const date=$('#nDate').value; if(!date){ showToast('日付を選んでください'); return; }
   const expiry=new Date(`${date}T12:00:00`).toISOString();
   // 新しく入った分はまだ値下げしていない → 値下げは「未」に戻す（メモは残す）
-  baseRef().collection('items').doc(nextId).update({expiry, markedDown:false, markdownPlace:'', markdownDiscount:''});
+  baseRef().collection('items').doc(nextId).update({expiry, markedDown:false, markdownPlace:'', markdownDiscount:'', markedDownAt:''});
   showToast('次の廃棄日を更新しました');
   closeNextDate(true);
 };
@@ -2081,7 +2135,7 @@ function bmCardEl(it){
     `<div class="btags"><span class="bday ${cls}">${label}</span>` +
       (it.repeat? `<span class="bday rep">繰り返し</span>` : '') + `</div>` +
     `<div class="bqty">${it.qty!=null? it.qty+'点' : '—'}</div>` +
-    (it.markedDown? `<div class="bmd"><span class="bmdtag">値下げ済</span>`
+    (it.markedDown? `<div class="bmd"><span class="bmdtag">${mdDate(it)?esc(mdDate(it))+' ':''}値下げ済</span>`
         + (it.markdownPlace? `<span class="bmdplace">${esc(it.markdownPlace)}</span>` : '')
         + (it.markdownDiscount? `<span class="bmddisc">${esc(it.markdownDiscount)}</span>` : '')
         + `</div>` : '') +

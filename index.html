@@ -140,6 +140,39 @@
     #scanStep2 .chip{padding:6px 10px; font-size:12px;}
   }
 
+  /* ===== 登録：1問ずつ ===== */
+  .wiz .wizTop{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .wiz .wizProg{font-size:13px; font-weight:700; color:var(--gray); white-space:nowrap; min-width:40px;}
+  .wiz .wizBar{flex:1 1 auto; height:6px; background:#eef0f3; border-radius:3px; overflow:hidden;}
+  .wiz .wizBar i{display:block; height:100%; width:0; background:var(--green); transition:width .25s;}
+  .wiz .wizQuit{border:none; background:none; color:var(--gray); font-size:14px; font-weight:700; padding:6px 2px; cursor:pointer;}
+  .wiz .wizKnown{margin-top:8px; background:#fff8e8; border:1px solid #f0dcb4; color:#8a6a20; border-radius:10px; padding:7px 10px; font-size:13px; line-height:1.5;}
+  .wiz .wpage{display:none; padding:16px 0 4px;}
+  .wiz .wpage.on{display:block; animation:wfade .2s ease-out;}
+  @keyframes wfade{from{opacity:0; transform:translateX(14px);} to{opacity:1; transform:none;}}
+  .wiz .wq{font-size:21px; font-weight:800; line-height:1.4; margin-bottom:6px;}
+  .wiz .wsub{color:var(--gray); font-size:13.5px; margin:0 0 12px;}
+  #scanStep2 .wpage input{font-size:18px; padding:13px;}
+  #scanStep2 .wpage .chips{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px;}
+  #scanStep2 .wpage .chip{padding:12px 8px; font-size:16px; font-weight:600;}
+  #scanStep2 .wpage .repeatToggle{padding:14px; margin-top:4px;}
+  #scanStep2 .wpage .rt-sub{font-size:14px; font-weight:700;}
+  #scanStep2 .wpage .mdseg button{padding:12px 4px; font-size:16px;}
+  #scanStep2 .wpage .row .btn.sm{font-size:20px; padding:12px 0;}
+  #scanStep2 .wizNav .row, #scanStep2 #wizFinal{margin-top:16px;}
+  #scanStep2 .wizNav .btn, #scanStep2 #wizFinal .btn{padding:14px 8px; font-size:16px;}
+  #scanStep2 .wizNav .wizSub{margin-top:8px;}
+  #scanStep2 .wizNav .wizSub .btn{padding:10px 8px; font-size:14px;}
+  .wsum{border-top:1px solid var(--line);}
+  .wsum .wrow{display:flex; align-items:center; gap:10px; padding:11px 4px; border-bottom:1px solid var(--line); cursor:pointer;}
+  .wsum .wrow:active{background:#f6f7f9;}
+  .wsum .wrow.fixed{cursor:default;}
+  .wsum .wk{flex:0 0 70px; color:var(--gray); font-size:13px; font-weight:700;}
+  .wsum .wv{flex:1 1 auto; min-width:0; font-size:15px; font-weight:700; word-break:break-all; display:flex; align-items:center; gap:8px;}
+  .wsum .wv img{width:40px; height:40px; flex:0 0 40px; object-fit:cover; border-radius:8px; border:1px solid var(--line);}
+  .wsum .wv.dim{color:var(--gray); font-weight:600;}
+  .wsum .wgo{flex:0 0 auto; color:#b3bac4; font-size:20px; line-height:1;}
+
   .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px;}
   .card h3{margin:0 0 4px; font-size:15px;}
   .muted{color:var(--gray); font-size:13px;}
@@ -467,64 +500,103 @@
       </div>
     </div>
 
-    <!-- ステップ3：商品情報 -->
+    <!-- ステップ3：商品情報（1問ずつ。入力欄のidは従来どおり＝保存の処理は共通） -->
     <div id="scanStep2" style="display:none">
-    <div class="card" id="entryCard">
+    <div class="card wiz" id="entryCard">
+      <div class="wizTop">
+        <span class="wizProg" id="wizProg"></span>
+        <div class="wizBar"><i id="wizBarFill"></i></div>
+        <button type="button" class="wizQuit" id="entryCancel">やめる</button>
+      </div>
       <div class="janShow" id="janShow"></div>
+      <div class="wizKnown" id="wizKnown" style="display:none"></div>
 
-      <div class="repeatToggle">
-        <div>
-          <div class="rt-title">繰り返し商品</div>
-          <div class="rt-sub">和菓子・珍味など鮮度が短い商品</div>
+      <div class="wpage" data-p="repeat">
+        <div class="wq">繰り返し商品にしますか？</div>
+        <p class="wsub">和菓子・珍味など、なくなるとまた入荷する鮮度の短い商品</p>
+        <div class="repeatToggle">
+          <div>
+            <div class="rt-title">繰り返し商品</div>
+            <div class="rt-sub" id="repeatState">しない</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="repeatChk"><span class="slider"></span></label>
         </div>
-        <label class="switch"><input type="checkbox" id="repeatChk"><span class="slider"></span></label>
       </div>
 
-      <label>廃棄日（期限）</label>
-      <div class="chips" id="quickChips">
-        <button class="chip" data-preset="m0">今月末</button>
-        <button class="chip" data-preset="m1">来月末</button>
-        <button class="chip" data-preset="m2">再来月末</button>
-        <button class="chip" data-preset="custom">カスタム</button>
-      </div>
-      <div style="margin-top:8px">
-        <input id="edate" type="date">
-      </div>
-
-      <label>商品名</label>
-      <input id="pname" placeholder="例） 幕の内弁当">
-      <div class="muted" id="masterNote" style="margin-top:4px"></div>
-
-      <label class="lbl-img">商品画像（任意）</label>
-      <div class="imgrow">
-        <img id="imgPreview" alt="" style="display:none">
-        <label class="btn sec sm" for="imgInputCam" style="width:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>撮影</label>
-        <label class="btn sec sm" for="imgInput" style="width:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>アルバム</label>
-        <button type="button" id="imgClear" class="btn sec sm" style="width:auto; display:none">削除</button>
-        <input id="imgInputCam" type="file" accept="image/*" capture="environment" style="display:none">
-        <input id="imgInput" type="file" accept="image/*" style="display:none">
+      <div class="wpage" data-p="date">
+        <div class="wq">廃棄日はいつですか？</div>
+        <div class="chips" id="quickChips">
+          <button class="chip" data-preset="m0">今月末</button>
+          <button class="chip" data-preset="m1">来月末</button>
+          <button class="chip" data-preset="m2">再来月末</button>
+          <button class="chip" data-preset="custom">カスタム</button>
+        </div>
+        <div style="margin-top:10px">
+          <input id="edate" type="date">
+        </div>
       </div>
 
-      <label>値下げ</label>
-      <div class="seg mdseg" id="mdSeg">
-        <button type="button" class="on" data-v="0">未</button>
-        <button type="button" data-v="1">済</button>
-      </div>
-      <div class="mdbox" id="mdFields" style="display:none"></div>
-
-      <label>メモ（任意）</label>
-      <input id="memo" maxlength="120" placeholder="例） レジ前の棚に移動">
-
-      <label>個数</label>
-      <div class="row" style="align-items:center">
-        <button class="btn sec sm" id="qtyMinus" style="flex:0 0 52px">−</button>
-        <input id="qty" type="number" min="1" placeholder="未入力" style="text-align:center">
-        <button class="btn sec sm" id="qtyPlus" style="flex:0 0 52px">＋</button>
+      <div class="wpage" data-p="name">
+        <div class="wq">商品名は？</div>
+        <input id="pname" placeholder="例） 幕の内弁当" enterkeyhint="next">
+        <div class="muted" id="masterNote" style="margin-top:4px"></div>
+        <label class="lbl-img">商品画像（任意）</label>
+        <div class="imgrow">
+          <img id="imgPreview" alt="" style="display:none">
+          <label class="btn sec sm" for="imgInputCam" style="width:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>撮影</label>
+          <label class="btn sec sm" for="imgInput" style="width:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>アルバム</label>
+          <button type="button" id="imgClear" class="btn sec sm" style="width:auto; display:none">削除</button>
+          <input id="imgInputCam" type="file" accept="image/*" capture="environment" style="display:none">
+          <input id="imgInput" type="file" accept="image/*" style="display:none">
+        </div>
       </div>
 
-      <div class="row" style="margin-top:14px">
-        <button class="btn sec" id="entryCancel">やめる</button>
-        <button class="btn" id="saveBtn">✓ 登録する</button>
+      <div class="wpage" data-p="qty">
+        <div class="wq">個数は？</div>
+        <p class="wsub">分からないときはスキップできます</p>
+        <div class="row" style="align-items:center">
+          <button class="btn sec sm" id="qtyMinus" style="flex:0 0 56px">−</button>
+          <input id="qty" type="number" min="1" inputmode="numeric" placeholder="未入力" style="text-align:center" enterkeyhint="next">
+          <button class="btn sec sm" id="qtyPlus" style="flex:0 0 56px">＋</button>
+        </div>
+      </div>
+
+      <div class="wpage" data-p="md">
+        <div class="wq">値下げはしましたか？</div>
+        <div class="seg mdseg" id="mdSeg">
+          <button type="button" class="on" data-v="0">未</button>
+          <button type="button" data-v="1">済</button>
+        </div>
+        <div class="mdbox" id="mdFields" style="display:none"></div>
+      </div>
+
+      <div class="wpage" data-p="memo">
+        <div class="wq">メモはありますか？</div>
+        <p class="wsub">例） レジ前の棚に移動</p>
+        <input id="memo" maxlength="120" placeholder="メモ（任意）" enterkeyhint="next">
+      </div>
+
+      <div class="wpage" data-p="confirm">
+        <div class="wq">この内容で登録しますか？</div>
+        <p class="wsub">直したい行を押すと、その質問に戻ります</p>
+        <div class="wsum" id="wizSummary"></div>
+      </div>
+
+      <!-- 質問のあいだのボタン -->
+      <div class="wizNav" id="wizNav">
+        <div class="row">
+          <button type="button" class="btn sec" id="wizBack">戻る</button>
+          <button type="button" class="btn" id="wizNext">次へ</button>
+        </div>
+        <div class="row wizSub" id="wizSub">
+          <button type="button" class="btn sec" id="wizSkip">スキップ</button>
+          <button type="button" class="btn sec" id="wizToConfirm">確認へ進む</button>
+        </div>
+      </div>
+      <!-- 確認画面のボタン -->
+      <div class="row" id="wizFinal" style="display:none">
+        <button type="button" class="btn sec" id="wizQuit2">やめる</button>
+        <button type="button" class="btn" id="saveBtn">✓ 登録する</button>
       </div>
     </div>
     </div>
@@ -1414,7 +1486,7 @@ bindMdSeg('mdSeg','mdFields'); bindMdSeg('eMdSeg','eMdFields');
 function clearEntry(){
   $('#jan').value=''; $('#pname').value=''; $('#qty').value='';
   $('#masterNote').textContent='';
-  $('#repeatChk').checked=false;
+  $('#repeatChk').checked=false; syncRepeatState();
   // 廃棄日は当日を既定にする（空欄だと選び忘れて見逃すため）
   $('#edate').value = toLocalInput(new Date()).date;
   setMd('mdSeg', false);          // 値下げは「未」から
@@ -1459,8 +1531,105 @@ function toEntryForm(){
   $('#janShow').textContent = j ? ('バーコード '+j) : 'バーコードなし';
   // 廃棄日は毎回「当日」に戻す。前の商品の日付が残るのを防ぎつつ、空欄で見逃すのも防ぐ
   $('#edate').value = toLocalInput(new Date()).date; setActiveChip(null);
+  // 同じバーコードの未廃棄がすでにあれば知らせる（二重登録の防止）
+  const live = j ? DB.items().filter(i=>i.jan===j && !i.discarded).sort((a,b)=> new Date(a.expiry)-new Date(b.expiry)) : [];
+  const kn=$('#wizKnown');
+  if(live.length){
+    const ds=live.slice(0,3).map(i=>fmtDateShort(i.expiry)).join('・');
+    kn.textContent = `この商品は ${ds}${live.length>3?` ほか${live.length-3}件`:''} の分が登録されています`;
+    kn.style.display='block';
+  } else { kn.textContent=''; kn.style.display='none'; }
   scanGoStep(2);
+  wizGo(0);
 }
+
+/* ============ 登録：1問ずつ進める ============
+   入力欄は1枚のカードの中にあり、表示する質問だけを切り替える。
+   保存は従来の「登録する」の処理をそのまま使う。 */
+const WIZ=['repeat','date','name','qty','md','memo','confirm'];
+const WIZ_SKIP={qty:1, md:1, memo:1};            // スキップできる質問
+let wizIdx=0, wizFromConfirm=false;               // 確認画面から直しに来たときは「確認に戻る」
+function wizGo(i, fromConfirm){
+  wizIdx=i; wizFromConfirm=!!fromConfirm;
+  const p=WIZ[i];
+  document.querySelectorAll('#entryCard .wpage').forEach(el=>el.classList.toggle('on', el.dataset.p===p));
+  if(p==='confirm') renderWizSummary();
+  wizNav();
+  window.scrollTo(0,0);
+  if(p==='name' && !$('#pname').value.trim()) setTimeout(()=>$('#pname').focus(), 60);
+}
+// 進み具合とボタンの出し分け
+function wizNav(){
+  const p=WIZ[wizIdx], conf=p==='confirm', n=WIZ.length-1;
+  $('#wizProg').textContent = conf ? '確認' : `${wizIdx+1} / ${n}`;
+  $('#wizBarFill').style.width = (conf ? 100 : Math.round((wizIdx+1)/(n+1)*100)) + '%';
+  $('#wizNav').style.display   = conf ? 'none' : '';
+  $('#wizFinal').style.display = conf ? '' : 'none';
+  $('#wizBack').style.display  = wizFromConfirm ? 'none' : '';
+  $('#wizBack').textContent    = wizIdx===0 ? '読み直す' : '戻る';
+  $('#wizNext').textContent    = wizFromConfirm ? '確認に戻る' : (p==='memo' ? '確認へ' : '次へ');
+  const showSkip = !wizFromConfirm && !!WIZ_SKIP[p];
+  // 商品名まで埋まったら、残りの任意の質問を飛ばして確認へ行ける
+  const showJump = !wizFromConfirm && wizIdx>=WIZ.indexOf('name') && wizIdx<WIZ.indexOf('memo') && !!$('#pname').value.trim();
+  $('#wizSkip').style.display = showSkip ? '' : 'none';
+  $('#wizToConfirm').style.display = showJump ? '' : 'none';
+  $('#wizSub').style.display = (showSkip||showJump) ? '' : 'none';
+}
+function wizValid(p){
+  if(p==='date' && !$('#edate').value){ showToast('廃棄日を選んでください'); return false; }
+  if(p==='name' && !$('#pname').value.trim()){ showToast('商品名を入力してください'); $('#pname').focus(); return false; }
+  return true;
+}
+$('#wizNext').onclick=()=>{
+  if(!wizValid(WIZ[wizIdx])) return;
+  wizGo(wizFromConfirm ? WIZ.length-1 : wizIdx+1);
+};
+$('#wizBack').onclick=()=>{
+  if(wizIdx===0){ clearEntry(); scanGoStep(1); startCam(); return; }   // 最初の質問からはバーコードの読み直しへ
+  wizGo(wizIdx-1);
+};
+$('#wizSkip').onclick=()=>{
+  const p=WIZ[wizIdx];
+  if(p==='qty')  $('#qty').value='';
+  if(p==='md'){  setMd('mdSeg', false); $('#mdFields').style.display='none'; }
+  if(p==='memo') $('#memo').value='';
+  wizGo(wizIdx+1);
+};
+$('#wizToConfirm').onclick=()=>{ if(!wizValid(WIZ[wizIdx])) return; wizGo(WIZ.length-1); };
+$('#pname').addEventListener('input', wizNav);
+// キーボードの「次へ／改行」で次の質問へ
+['pname','qty','memo'].forEach(id=>$('#'+id).addEventListener('keydown', e=>{
+  if(e.key==='Enter' && !e.isComposing){ e.preventDefault(); $('#wizNext').click(); }
+}));
+function syncRepeatState(){ $('#repeatState').textContent = $('#repeatChk').checked ? 'する' : 'しない'; }
+$('#repeatChk').addEventListener('change', syncRepeatState);
+// 確認画面：行を押すとその質問へ
+function renderWizSummary(){
+  const jan=$('#jan').value.trim(), name=$('#pname').value.trim(), date=$('#edate').value;
+  const qty=$('#qty').value.trim(), memo=$('#memo').value.trim(), md=getMd('mdSeg');
+  const WD=['日','月','火','水','木','金','土'];
+  let dateTxt='未選択';
+  if(date){ const d=new Date(date+'T12:00:00'); dateTxt=`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}（${WD[d.getDay()]}）`; }
+  let mdTxt='未';
+  if(md){ const lb=[readMdGroup($('#mdFields'),'place'), readMdGroup($('#mdFields'),'discount')].filter(Boolean).join('・'); mdTxt='済'+(lb?`（${lb}）`:''); }
+  const img=safeImg(currentImg);
+  const rows=[
+    ['バーコード', esc(jan||'なし'), '', !jan],
+    ['繰り返し',   $('#repeatChk').checked?'する':'しない', 'repeat', false],
+    ['廃棄日',     esc(dateTxt), 'date', !date],
+    ['商品名',     (img?`<img src="${esc(img)}" alt="">`:'')+`<span>${esc(name)}</span>`, 'name', false],
+    ['個数',       esc(qty?qty+'点':'未入力'), 'qty', !qty],
+    ['値下げ',     esc(mdTxt), 'md', !md],
+    ['メモ',       esc(memo||'なし'), 'memo', !memo],
+  ];
+  $('#wizSummary').innerHTML = rows.map(([k,v,go,dim])=>
+    `<div class="wrow${go?'':' fixed'}"${go?` data-go="${go}"`:''}><span class="wk">${k}</span>`
+    + `<span class="wv${dim?' dim':''}">${v}</span>${go?'<span class="wgo">›</span>':''}</div>`).join('');
+}
+$('#wizSummary').addEventListener('click', e=>{
+  const r=e.target.closest('.wrow[data-go]'); if(!r) return;
+  wizGo(WIZ.indexOf(r.dataset.go), true);
+});
 $('#beginBtn').onclick   = beginEntry;
 $('#scanCancel').onclick = ()=>{ clearEntry(); scanGoStep(0); };
 $('#skipScan').onclick   = ()=>{ $('#jan').value=''; $('#masterNote').textContent=''; toEntryForm(); };
@@ -1470,6 +1639,7 @@ $('#entryCancel').onclick= ()=>{
   appConfirm('入力した内容を破棄して、最初に戻りますか？',
     ()=>{ clearEntry(); scanGoStep(0); }, '破棄する', 'var(--red)');
 };
+$('#wizQuit2').onclick = ()=> $('#entryCancel').onclick();
 let lastCode='', lastTime=0;
 async function loopDetect(){
   if(!scanning) return;

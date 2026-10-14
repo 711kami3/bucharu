@@ -1296,7 +1296,7 @@ function checkAlerts(){
   const near = soon.filter(i=>statusOf(i.expiry)==='soon');
   let html = '⚠️ ';
   if(over.length) html += `<b>期限超過 ${over.reduce((a,i)=>a+qtyOf(i),0)}点</b> `;
-  if(near.length) html += `／ まもなく ${near.reduce((a,i)=>a+qtyOf(i),0)}点`;
+  if(near.length) html += `${over.length?'／ ':''}まもなく ${near.reduce((a,i)=>a+qtyOf(i),0)}点`;   // 超過がない日は区切りを出さない
   html += `<br><span class="muted">`+ soon.slice(0,3).map(i=>`${esc(i.name)}(${statusLabel(i.expiry)})`).join('・') + (soon.length>3?' 他':'') +`</span>`;
   banner.innerHTML = html; banner.dataset.has='1'; applyBannerVisibility();
   // ブラウザ通知（許可時のみ・重複防止）
